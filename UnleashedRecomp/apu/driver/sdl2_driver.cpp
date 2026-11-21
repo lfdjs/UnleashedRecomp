@@ -164,7 +164,9 @@ static void CreateAudioThread()
 {
     if (!g_audioDeviceReady || !g_audioDevice)
     {
-        LOGFN_ERROR("Cannot create audio producer without a playback device.");
+        // EN: LOGN_ERROR accepts a plain literal; LOGFN_ERROR requires formatting arguments.
+        // PT-BR: LOGN_ERROR aceita texto simples; LOGFN_ERROR exige argumentos de formatacao.
+        LOGN_ERROR("Cannot create audio producer without a playback device.");
         return;
     }
 
@@ -214,7 +216,9 @@ void XAudioRegisterClient(PPCFunc* callback, uint32_t param)
     auto* pClientParam = static_cast<uint32_t*>(g_userHeap.Alloc(sizeof(param)));
     if (pClientParam == nullptr)
     {
-        LOGFN_ERROR("XAudio client parameter allocation failed.");
+        // EN: Use the literal logging macro; no fmt placeholder is required here.
+        // PT-BR: Usa a macro de log literal, sem parametros de formatacao.
+        LOGN_ERROR("XAudio client parameter allocation failed.");
         return;
     }
 
