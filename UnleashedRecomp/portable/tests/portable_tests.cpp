@@ -95,6 +95,21 @@ int main() {
         "/unlikely_unleashed_working_dir_missing_314159"), "reject invalid working directory");
     Check(!portable::process::StartDetachedLinux({}, {}), "reject empty executable");
 #endif
+#if defined(__linux__) && defined(__x86_64__)
+    // EN: Reserve the full 4 GiB Xbox 360 address range without touching it;
+    //     POSIX only consumes virtual address space for this smoke check.
+    // PT-BR: Reserva os 4 GiB virtuais do Xbox 360 sem ocupar toda a RAM
+    //     fisica, validando o requisito principal do runtime em Linux x64.
+    constexpr std::size_t fullGuestBytes = 0x100000000ULL;
+    const auto fullGuest = portable::memory::AllocateDesktop(fullGuestBytes);
+    Check(fullGuest.base != nullptr && fullGuest.size == fullGuestBytes,
+        "full 4 GiB guest virtual reservation");
+    if (fullGuest.base)
+    {
+        Check(portable::memory::ProtectNull(fullGuest, hostPage), "4 GiB null guard");
+        portable::memory::ReleaseDesktop(fullGuest);
+    }
+#endif
     portable::threading::Yield();
     portable::threading::SleepFor(std::chrono::nanoseconds::zero());
     std::cout << (failures ? "Portable tests failed\n" : "Portable tests passed\n");

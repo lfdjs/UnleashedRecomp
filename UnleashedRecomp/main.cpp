@@ -6,6 +6,8 @@
 #include <gpu/video.h>
 #include <kernel/function.h>
 #include <kernel/memory.h>
+#include <portable/platform.h>
+#include <portable/memory.h>
 #include <kernel/heap.h>
 #include <kernel/xam.h>
 #include <kernel/io/file_system.h>
@@ -318,6 +320,26 @@ int main(int argc, char *argv[])
         LOGN_WARNING("OS does not support registry.");
 
     os::logger::Init();
+
+    // EN: Log the compiled target, CPU, and host page size to help diagnose
+    //     runtime crashes before initializing game content or GPU drivers.
+    // PT-BR: Registra destino, CPU e tamanho da pagina nativa para diagnosticar
+    //     falhas antes de inicializar conteudo do jogo ou drivers graficos.
+    LOGFN("Portable runtime target: OS={}, CPU={}, hostPageBytes={}",
+        portable::Name(portable::CurrentOS()),
+        portable::Name(portable::CurrentCPU()),
+        portable::memory::HostPageSize());
+
+    // EN: An empty user-data root would silently turn saves and configuration
+    //     into relative paths. Abort rather than write outside the intended
+    //     application storage directory (notably on future Android ports).
+    // PT-BR: Um diretorio vazio transformaria saves e configuracoes em caminhos
+    //     relativos. Interrompe para nao gravar fora da area do aplicativo.
+    if (GetUserPath().empty())
+    {
+        LOGN_ERROR("No valid application user-data directory is configured.");
+        return 1;
+    }
 
     PreloadContext preloadContext;
     preloadContext.PreloadExecutable();

@@ -46,7 +46,11 @@ std::filesystem::path UserDataRoot(std::string_view application) {
 #else
     const auto config = root / ".config";
 #endif
-    return std::filesystem::exists(config) ? config / name : root / ("." + name);
+    // EN: Avoid throwing on inaccessible config directories during startup.
+    // PT-BR: Evita excecoes se o diretorio de configuracao estiver inacessivel.
+    std::error_code configError;
+    const bool configAvailable = std::filesystem::is_directory(config, configError);
+    return (configAvailable && !configError) ? config / name : root / ("." + name);
 #endif
 #endif
 }
