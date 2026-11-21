@@ -95,6 +95,21 @@ void KiSystemStartup()
 
     g_userHeap.Init();
 
+    // EN: Both guest heaps are mandatory. On a failed Switch lazy commit or
+    //     desktop heap initialization, stop before guest code can dereference
+    //     an invalid allocator.
+    // PT-BR: Os dois heaps sao obrigatorios. Se houver falha de commit no Switch
+    //     ou inicializacao no desktop, interrompe antes de acessar memoria invalida.
+    if (g_userHeap.heap == nullptr || g_userHeap.physicalHeap == nullptr)
+    {
+        LOGFN_ERROR("Guest heap initialization failed: user={}, physical={}",
+            static_cast<const void*>(g_userHeap.heap),
+            static_cast<const void*>(g_userHeap.physicalHeap));
+        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, GameWindow::GetTitle(),
+            Localise("System_MemoryAllocationFailed").c_str(), GameWindow::s_pWindow);
+        std::_Exit(1);
+    }
+
 #if defined(__SWITCH__)
     LOGFN("Switch guest heap ready: heap={}, physicalHeap={}", static_cast<const void*>(g_userHeap.heap), static_cast<const void*>(g_userHeap.physicalHeap));
 #endif

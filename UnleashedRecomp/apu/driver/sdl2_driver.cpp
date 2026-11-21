@@ -154,8 +154,28 @@ static void AudioThread()
     }
 }
 
+/**
+ * EN: Start the audio producer only after a valid playback device exists.
+ *     Repeated client registration must not create a second native thread.
+ * PT-BR: Inicia a thread de producao somente com dispositivo de audio valido.
+ *     Registros repetidos nao podem criar uma segunda thread nativa.
+ */
 static void CreateAudioThread()
 {
+    if (!g_audioDeviceReady || !g_audioDevice)
+    {
+        LOGFN_ERROR("Cannot create audio producer without a playback device.");
+        return;
+    }
+
+#if defined(__SWITCH__)
+    if (g_audioThreadCreated)
+        return;
+#else
+    if (g_audioThread && g_audioThread->joinable())
+        return;
+#endif
+
     SDL_PauseAudioDevice(g_audioDevice, 0);
     g_audioThreadShouldExit = false;
 #if defined(__SWITCH__)
@@ -183,9 +203,21 @@ static void CreateAudioThread()
 #endif
 }
 
+/**
+ * EN: Register the PPC audio callback, preserving the guest-endian parameter.
+ *     Report guest-heap allocation errors instead of dereferencing null.
+ * PT-BR: Registra o callback PPC e preserva o parametro em endian do Xbox.
+ *     Detecta falhas de alocacao sem desreferenciar ponteiros nulos.
+ */
 void XAudioRegisterClient(PPCFunc* callback, uint32_t param)
 {
     auto* pClientParam = static_cast<uint32_t*>(g_userHeap.Alloc(sizeof(param)));
+    if (pClientParam == nullptr)
+    {
+        LOGFN_ERROR("XAudio client parameter allocation failed.");
+        return;
+    }
+
     ByteSwapInplace(param);
     *pClientParam = param;
     g_clientCallbackParam = g_memory.MapVirtual(pClientParam);
@@ -194,8 +226,17 @@ void XAudioRegisterClient(PPCFunc* callback, uint32_t param)
     CreateAudioThread();
 }
 
+/**
+ * EN: Queue Xbox 360 PCM audio into the active SDL playback device.
+ *     Never submit to an uninitialized/closed device or read a null buffer.
+ * PT-BR: Envia audio PCM do Xbox 360 ao dispositivo SDL ativo.
+ *     Nunca acessa buffer nulo nem dispositivo fechado ou nao inicializado.
+ */
 void XAudioSubmitFrame(void* samples)
 {
+    if (samples == nullptr || !g_audioDeviceReady || !g_audioDevice)
+        return;
+
     auto floatSamples = reinterpret_cast<be<float>*>(samples);
 
     if (g_downMixToStereo)

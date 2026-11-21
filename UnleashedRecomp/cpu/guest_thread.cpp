@@ -5,6 +5,11 @@
 #include <kernel/function.h>
 #include <os/logger.h>
 #include "ppc_context.h"
+#include <cstring>
+#include <new>
+#if defined(__APPLE__)
+#include <sys/resource.h>
+#endif
 
 constexpr size_t PCR_SIZE = 0xAB0;
 constexpr size_t TLS_SIZE = 0x100;
@@ -18,7 +23,12 @@ GuestThreadContext::GuestThreadContext(uint32_t cpuNumber)
 {
     assert(thread == nullptr);
 
+    // EN: Guest thread state must exist before the context and its stack are initialized.
+    // PT-BR: A estrutura e a pilha do jogo devem existir antes de inicializar o contexto.
     thread = (uint8_t*)g_userHeap.Alloc(TOTAL_SIZE);
+    if (thread == nullptr)
+        throw std::bad_alloc();
+
     memset(thread, 0, TOTAL_SIZE);
 
     *(uint32_t*)thread = ByteSwap(g_memory.MapVirtual(thread + PCR_SIZE)); // tls pointer
@@ -47,24 +57,23 @@ static size_t GetStackSize()
 #if defined(__SWITCH__)
     return 8 * 1024 * 1024;
 #else
-    // Cache as this should not change.
-    static size_t stackSize = 0;
-    if (stackSize == 0)
-    {
-        // 8 MiB is a typical default.
-        constexpr auto defaultSize = 8 * 1024 * 1024;
-        struct rlimit lim;
-        const auto ret = getrlimit(RLIMIT_STACK, &lim);
-        if (ret == 0 && lim.rlim_cur < defaultSize)
+    // EN: Thread-safe function-local initialization avoids a data race when
+    //     multiple guest threads are created concurrently on macOS.
+    // PT-BR: A inicializacao estatica thread-safe evita data race na criacao
+    //     simultanea de threads do jogo no macOS.
+    static const size_t stackSize = [] {
+        constexpr size_t defaultSize = 8 * 1024 * 1024;
+        struct rlimit limit{};
+        if (getrlimit(RLIMIT_STACK, &limit) == 0 &&
+            limit.rlim_cur != RLIM_INFINITY &&
+            limit.rlim_cur >= PTHREAD_STACK_MIN &&
+            limit.rlim_cur < defaultSize)
         {
-            // Use what the system allows.
-            stackSize = lim.rlim_cur;
+            return static_cast<size_t>(limit.rlim_cur);
         }
-        else
-        {
-            stackSize = defaultSize;
-        }
-    }
+        return defaultSize;
+    }();
+
     return stackSize;
 #endif
 }
@@ -88,7 +97,14 @@ GuestThreadHandle::GuestThreadHandle(const GuestThreadParams& params)
 #ifdef USE_PTHREAD
 {
     pthread_attr_t attr;
-    pthread_attr_init(&attr);
+    // EN: Check pthread attribute initialization before using the structure.
+    // PT-BR: Verifica a inicializacao dos atributos antes de utiliza-los.
+    const auto attrResult = pthread_attr_init(&attr);
+    if (attrResult != 0)
+    {
+        LOGFN_ERROR("pthread_attr_init failed: {}", attrResult);
+        return;
+    }
     const auto stackResult = pthread_attr_setstacksize(&attr, GetStackSize());
     if (stackResult != 0)
     {
@@ -118,11 +134,32 @@ GuestThreadHandle::GuestThreadHandle(const GuestThreadParams& params)
 }
 #endif
 
+#ifdef USE_PTHREAD
+/**
+ * EN: Serialize pthread_join, avoiding the previous race where the 'joined'
+ *     flag became true before the worker actually finished.
+ * PT-BR: Serializa pthread_join, evitando a condicao de corrida em que 'joined'
+ *     ficava verdadeiro antes da thread realmente encerrar.
+ */
+void GuestThreadHandle::JoinPthread() noexcept
+{
+    std::lock_guard lock(joinMutex);
+    if (!threadCreated || joined || pthread_equal(thread, pthread_self()))
+        return;
+
+    if (pthread_join(thread, nullptr) == 0)
+        joined = true;
+}
+#endif
+
+/**
+ * EN: Wait for a created native guest thread before releasing its kernel handle.
+ * PT-BR: Aguarda a thread nativa antes de liberar seu handle do kernel.
+ */
 GuestThreadHandle::~GuestThreadHandle()
 {
 #ifdef USE_PTHREAD
-    if (threadCreated && !joined.exchange(true))
-        pthread_join(thread, nullptr);
+    JoinPthread();
 #else
     if (thread.joinable())
         thread.join();
@@ -133,14 +170,26 @@ template <typename ThreadType>
 static uint32_t CalcThreadId(const ThreadType& id)
 {
     if constexpr (sizeof(id) == 4)
-        return *reinterpret_cast<const uint32_t*>(&id);
+    {
+        // EN: memcpy avoids strict-aliasing violations when the native ID is 32-bit.
+        // PT-BR: memcpy evita violar o strict aliasing com IDs nativos de 32 bits.
+        uint32_t bits = 0;
+        std::memcpy(&bits, &id, sizeof(bits));
+        return bits;
+    }
     else
         return XXH32(&id, sizeof(id), 0);
 }
 
+/**
+ * EN: Return the native guest thread identifier; zero means pthread creation failed.
+ * PT-BR: Retorna o ID da thread nativa; zero indica falha na criacao pthread.
+ */
 uint32_t GuestThreadHandle::GetThreadId() const
 {
 #ifdef USE_PTHREAD
+    if (!threadCreated)
+        return 0;
     return CalcThreadId(thread);
 #else
     return CalcThreadId(thread.get_id());
@@ -175,8 +224,7 @@ uint32_t GuestThreadHandle::Wait(uint32_t timeout)
     assert(timeout == INFINITE);
 
 #ifdef USE_PTHREAD
-    if (threadCreated && !joined.exchange(true))
-        pthread_join(thread, nullptr);
+    JoinPthread();
 #else
     if (thread.joinable())
         thread.join();

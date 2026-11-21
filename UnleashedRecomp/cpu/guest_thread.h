@@ -38,15 +38,24 @@ struct GuestThreadHandle : KernelObject
     std::mutex suspendMutex;
     std::condition_variable suspendCv;
 #ifdef USE_PTHREAD
-    pthread_t thread;
+    pthread_t thread{};
     bool threadCreated = false;
-    std::atomic<bool> joined = false;
+    // EN: Serialize all pthread_join calls; joined is set only after completion.
+    // PT-BR: Serializa pthread_join; joined so muda apos a thread terminar.
+    std::mutex joinMutex;
+    bool joined = false;
 #else
     std::thread thread;
 #endif
 
     GuestThreadHandle(const GuestThreadParams& params);
     ~GuestThreadHandle() override;
+
+#ifdef USE_PTHREAD
+    /** EN: Join a native thread at most once, including concurrent Wait calls.
+     *  PT-BR: Espera o encerramento da thread apenas uma vez, mesmo com Wait concorrentes. */
+    void JoinPthread() noexcept;
+#endif
 
     uint32_t GetThreadId() const;
     void Suspend();
