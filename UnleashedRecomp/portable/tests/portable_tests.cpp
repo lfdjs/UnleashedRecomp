@@ -5,6 +5,7 @@
 #include "../threading.h"
 #include "../memory.h"
 #include "../guest_address.h"
+#include "../process.h"
 #include <limits>
 #include "../filesystem.h"
 #include <chrono>
@@ -84,6 +85,16 @@ int main() {
         Check(portable::filesystem::EnsureDirectory(path, ec), "existing directory");
         std::filesystem::remove(path, ec);
     }
+#if defined(__linux__) && !defined(__ANDROID__)
+    // EN: Test both successful exec and errors on the detached Linux launcher.
+    // PT-BR: Testa exec bem-sucedido e falhas no lancador Linux separado.
+    Check(portable::process::StartDetachedLinux("/bin/true", {}), "spawn existing process");
+    Check(!portable::process::StartDetachedLinux(
+        "/unlikely_unleashed_recomp_executable_missing_314159", {}), "reject nonexistent process");
+    Check(!portable::process::StartDetachedLinux("/bin/true", {},
+        "/unlikely_unleashed_working_dir_missing_314159"), "reject invalid working directory");
+    Check(!portable::process::StartDetachedLinux({}, {}), "reject empty executable");
+#endif
     portable::threading::Yield();
     portable::threading::SleepFor(std::chrono::nanoseconds::zero());
     std::cout << (failures ? "Portable tests failed\n" : "Portable tests passed\n");

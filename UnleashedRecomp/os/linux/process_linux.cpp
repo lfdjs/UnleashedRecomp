@@ -1,18 +1,22 @@
 #include <os/process.h>
 
-#include <signal.h>
+#include <portable/process.h>
 
+/**
+ * EN: Resolve /proc/self/exe with space reserved for the NUL terminator,
+ *     avoiding a non-terminated buffer at PATH_MAX bytes.
+ * PT-BR: Resolve /proc/self/exe reservando espaco para o terminador NUL,
+ *     evitando strings sem terminacao quando o limite PATH_MAX e atingido.
+ */
 std::filesystem::path os::process::GetExecutablePath()
 {
     char exePath[PATH_MAX] = {};
-    if (readlink("/proc/self/exe", exePath, PATH_MAX) > 0)
-    {
-        return std::filesystem::path(std::u8string_view((const char8_t*)(exePath)));
-    }
-    else
-    {
-        return std::filesystem::path();
-    }
+    const ssize_t length = readlink("/proc/self/exe", exePath, sizeof(exePath) - 1);
+    if (length <= 0)
+        return {};
+
+    exePath[length] = '\0';
+    return std::filesystem::path(exePath);
 }
 
 std::filesystem::path os::process::GetExecutableRoot()
@@ -39,31 +43,16 @@ bool os::process::SetWorkingDirectory(const std::filesystem::path& path)
     return chdir(path.c_str()) == 0;
 }
 
-bool os::process::StartProcess(const std::filesystem::path& path, const std::vector<std::string>& args, std::filesystem::path work)
+/**
+ * EN: Launch an external Linux program through the shared POSIX implementation.
+ *     Unlike the old fork/exec path, this detects exec and chdir failures.
+ * PT-BR: Inicia um programa Linux pelo backend POSIX compartilhado.
+ *     Diferentemente do fork/exec anterior, detecta falhas de exec e chdir.
+ */
+bool os::process::StartProcess(const std::filesystem::path& path,
+    const std::vector<std::string>& args, std::filesystem::path work)
 {
-    pid_t pid = fork();
-    if (pid < 0)
-        return false;
-
-    if (pid == 0)
-    {
-        setsid();
-        
-        std::u8string workU8 = work.u8string();
-        chdir((const char*)(workU8.c_str())); 
-        
-        std::u8string pathU8 = path.u8string();
-        std::vector<char*> argStrs;
-        argStrs.push_back((char*)(pathU8.c_str()));
-        for (const std::string& arg : args)
-            argStrs.push_back((char *)(arg.c_str()));
-        
-        argStrs.push_back(nullptr);
-        execvp((const char*)(pathU8.c_str()), argStrs.data());
-        raise(SIGKILL);
-    }
-
-    return true;
+    return portable::process::StartDetachedLinux(path, args, work);
 }
 
 void os::process::CheckConsole()

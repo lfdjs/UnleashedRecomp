@@ -251,7 +251,13 @@ set_source_files_properties(${UNLEASHED_RECOMP_THIRDPARTY_SOURCES} PROPERTIES SK
 
 # EN: Desktop and Switch builds share the portable platform backend.
 # PT-BR: Builds desktop e Switch compartilham o backend de plataforma.
-set(UNLEASHED_RECOMP_PORTABLE_CXX_SOURCES "portable/memory.cpp" "portable/filesystem.cpp")
+# EN: Shared backends compile on every target; unused platform helpers are stubbed.
+# PT-BR: Backends comuns compilam em todos os destinos; recursos indisponiveis sao neutros.
+set(UNLEASHED_RECOMP_PORTABLE_CXX_SOURCES
+    "portable/memory.cpp"
+    "portable/filesystem.cpp"
+    "portable/process.cpp"
+)
 set(UNLEASHED_RECOMP_CXX_SOURCES
     "app.cpp"
     "exports.cpp"
