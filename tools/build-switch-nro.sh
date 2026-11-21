@@ -6,7 +6,9 @@ root_dir="$(cd "${script_dir}/.." && pwd)"
 
 image="${UNLEASHED_SWITCH_DOCKER_IMAGE:-switch-nvk-vulkan:local}"
 jobs="${JOBS:-8}"
-mac_host_build_dir="${UNLEASHED_SWITCH_MAC_HOST_TOOLS_BUILD_DIR:-${root_dir}/build/host-tools-macos}"
+# EN: Preserve the legacy macOS build-directory override for existing setups.
+# PT-BR: Preserva a configuracao anterior do diretorio de build no macOS.
+host_build_dir="${UNLEASHED_SWITCH_HOST_TOOLS_BUILD_DIR:-${UNLEASHED_SWITCH_MAC_HOST_TOOLS_BUILD_DIR:-${root_dir}/build/host-tools-native}}"
 linux_host_build_dir="${UNLEASHED_SWITCH_LINUX_HOST_TOOLS_BUILD_DIR:-/project/build/host-tools}"
 switch_build_dir="${UNLEASHED_SWITCH_BUILD_DIR:-/project/build/switch-app}"
 mesa_nvk_dir="${MESA_NVK_DIR:-$(cd "${root_dir}/.." && pwd)/mesa-clean}"
@@ -44,11 +46,21 @@ if [[ -f "${mesa_nvk_dir}/builddir-switch/src/nouveau/vulkan/libvulkan.a" ]]; th
   )
 fi
 
-echo "== Building macOS host shader tool =="
-cmake -S "${root_dir}" -B "${mac_host_build_dir}" \
-  -DCMAKE_BUILD_TYPE=Release \
-  -DUNLEASHED_RECOMP_HOST_TOOLS_ONLY=ON
-cmake --build "${mac_host_build_dir}" -j"${jobs}" --target XenosRecomp
+# EN: A prebuilt native XenosRecomp can be supplied for non-macOS hosts.
+# PT-BR: Permite usar um XenosRecomp nativo previamente compilado em Linux/macOS.
+host_xenos="${UNLEASHED_SWITCH_HOST_XENOS_RECOMP:-}"
+if [[ -z "${host_xenos}" ]]; then
+  echo "== Building native host shader compiler =="
+  cmake -S "${root_dir}" -B "${host_build_dir}" \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DUNLEASHED_RECOMP_HOST_TOOLS_ONLY=ON
+  cmake --build "${host_build_dir}" -j"${jobs}" --target XenosRecomp
+  host_xenos="${host_build_dir}/tools/XenosRecomp/XenosRecomp/XenosRecomp"
+fi
+if [[ ! -x "${host_xenos}" ]]; then
+  echo "Host XenosRecomp not executable: ${host_xenos}" >&2
+  exit 1
+fi
 
 echo "== Building Linux host generation tools in Docker =="
 docker run "${docker_args[@]}" "${image}" sh -lc \
@@ -66,13 +78,13 @@ docker run "${docker_args[@]}" "${image}" sh -lc \
     /project/UnleashedRecompLib/private/shader.ar \
     /project/UnleashedRecompLib/private/shader_decompressed.ar"
 
-echo "== Generating shader cache with macOS DXC =="
-"${mac_host_build_dir}/tools/XenosRecomp/XenosRecomp/XenosRecomp" \
+echo "== Generating shader cache with native host XenosRecomp =="
+"${host_xenos}" \
   "${root_dir}/UnleashedRecompLib/private" \
   "${root_dir}/UnleashedRecompLib/shader/shader_cache.cpp" \
   "${root_dir}/tools/XenosRecomp/XenosRecomp/shader_common.h"
 
-echo "== Generating app shader headers with macOS DXC =="
+echo "== Generating app shader headers with available native DXC =="
 "${root_dir}/tools/generate-switch-app-shaders.sh"
 
 echo "== Building Switch ELF and packaging NRO =="
