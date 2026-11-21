@@ -56,3 +56,18 @@ Os itens acima precisam de testes reais antes de considerar qualquer port conclu
 - O script usa `dxc` presente no PATH como segunda opcao e preserva o DXC macOS empacotado como fallback.
 - These options do **not** install devkitPro, Mesa NVK, DXC, or proprietary game files.
   Elas nao instalam devkitPro, Mesa NVK, DXC ou arquivos proprietarios do jogo.
+
+## Native page sizes / Tamanhos nativos de pagina
+
+The desktop VM backend rejects guard operations whose requested guest protection size
+does not align with the native host page size. This prevents silently protecting valid
+low guest addresses (e.g. 4 KiB guest protection on a 16 KiB macOS ARM64 host).
+
+O backend de memoria impede protecoes cujo tamanho nao seja multiplo da pagina
+nativa. Assim, evita bloquear silenciosamente enderecos validos do jogo
+(por exemplo, 4 KiB solicitados em um macOS ARM64 com paginas de 16 KiB).
+
+**macOS ARM64 guest-memory startup requires a dedicated compatibility strategy and
+has not been validated.** The current failure is intentional rather than a silent
+memory corruption. **A inicializacao da memoria guest no macOS ARM64 ainda depende
+de estrategia especifica e nao esta validada.**

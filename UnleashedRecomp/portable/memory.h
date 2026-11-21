@@ -3,6 +3,10 @@
 #include <cstdint>
 
 namespace portable::memory {
+/** EN: Query native VM page granularity for safe mprotect/VirtualProtect calls.
+ *  PT-BR: Consulta o tamanho nativo de pagina para protecoes seguras de memoria. */
+size_t HostPageSize() noexcept;
+
 struct Region {
     void* base = nullptr;
     size_t size = 0;

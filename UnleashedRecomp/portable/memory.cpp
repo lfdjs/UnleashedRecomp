@@ -6,9 +6,24 @@
 #include <windows.h>
 #elif !defined(__SWITCH__) && !defined(UNLEASHED_RECOMP_SWITCH)
 #include <sys/mman.h>
+#include <unistd.h>
 #endif
 
 namespace portable::memory {
+size_t HostPageSize() noexcept {
+#if defined(_WIN32)
+    SYSTEM_INFO info{};
+    GetSystemInfo(&info);
+    return info.dwPageSize;
+#elif defined(__SWITCH__) || defined(UNLEASHED_RECOMP_SWITCH)
+    // EN: Host-page data is supplied by libnx for platform-specific mapping.
+    // PT-BR: O libnx fornece o tamanho das paginas ao mapeador do Switch.
+    return 0;
+#else
+    const long size = sysconf(_SC_PAGESIZE);
+    return size > 0 ? static_cast<size_t>(size) : 0;
+#endif
+}
 Region AllocateDesktop(size_t size, uintptr_t preferred) noexcept {
     if (!size) return {};
 #if defined(_WIN32)
@@ -36,7 +51,12 @@ Region AllocateDesktop(size_t size, uintptr_t preferred) noexcept {
 #endif
 }
 bool ProtectNull(Region region, size_t pageBytes) noexcept {
-    if (!region.base || pageBytes == 0 || pageBytes > region.size) return false;
+    // EN: Never round up a guest guard over valid low guest addresses.
+    // PT-BR: Nunca arredonde a protecao sobre enderecos baixos validos do jogo.
+    const size_t hostPage = HostPageSize();
+    if (!region.base || !hostPage || pageBytes == 0 ||
+        pageBytes > region.size || (pageBytes % hostPage) != 0)
+        return false;
 #if defined(_WIN32)
     DWORD oldProtection = 0;
     return VirtualProtect(region.base, pageBytes, PAGE_NOACCESS, &oldProtection) != 0;

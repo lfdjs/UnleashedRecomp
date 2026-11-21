@@ -33,14 +33,20 @@ int main() {
     Check(portable::input::ClampAxis(50000) == 32767, "positive axis");
     Check(portable::input::DigitalTrigger(true) == 255, "digital trigger");
     Check(portable::memory::AllocateDesktop(0).base == nullptr, "zero allocation rejected");
+    const auto hostPage = portable::memory::HostPageSize();
+    Check(hostPage >= 4096, "native page size available");
     auto region = portable::memory::AllocateDesktop(65536, 0);
     Check(region.base != nullptr, "guest virtual memory allocation");
     if (region.base) {
-        Check(portable::memory::ProtectNull(region, 4096), "null guard");
+        // EN: macOS ARM64 typically has 16 KiB pages; do not assume 4 KiB.
+        // PT-BR: O macOS ARM64 normalmente usa paginas de 16 KiB.
+        Check(portable::memory::ProtectNull(region, hostPage), "native null guard");
+        if (hostPage > 4096)
+            Check(!portable::memory::ProtectNull(region, 4096), "non-native guest guard rejected");
         Check(!portable::memory::ProtectNull(region, 65537), "oversized guard rejected");
         auto* bytes = static_cast<uint8_t*>(region.base);
-        bytes[4096] = 0x5a;
-        Check(bytes[4096] == 0x5a, "writable second page");
+        bytes[hostPage] = 0x5a;
+        Check(bytes[hostPage] == 0x5a, "writable next host page");
         portable::memory::ReleaseDesktop(region);
     }
     Check(!portable::filesystem::UserDataRoot("UnleashedRecomp").empty(), "user path");
