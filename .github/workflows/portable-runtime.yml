@@ -87,7 +87,11 @@ jobs:
         shell: bash
         run: git submodule update --init --recursive tools/XenonRecomp tools/XenosRecomp
       - name: Configure generators
-        run: cmake -S . -B build/host-tools -DUNLEASHED_RECOMP_HOST_TOOLS_ONLY=ON -DCMAKE_BUILD_TYPE=Debug
+        # EN: XenonRecomp has anonymous aggregate members accepted by Clang,
+        #     but rejected by GCC's stricter parsing of this C++ extension.
+        # PT-BR: O XenonRecomp usa agregados anonimos aceitos pelo Clang,
+        #     mas rejeitados pelo GCC na sintaxe usada pelo submodulo.
+        run: cmake -S . -B build/host-tools -DUNLEASHED_RECOMP_HOST_TOOLS_ONLY=ON -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
       - name: Build generators
         run: cmake --build build/host-tools --parallel 2 --target file_to_c x_decompress XenonRecomp XenosRecomp
 

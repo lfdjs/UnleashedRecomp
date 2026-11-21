@@ -59,7 +59,14 @@ if [[ "$host_tools" == true ]]; then
     echo "BLOCKED: run git submodule update --init --recursive tools/XenonRecomp tools/XenosRecomp" >&2
     exit 2
   fi
-  cmake -S "$root_dir" -B "${root_dir}/build/portable-host-tools" -DUNLEASHED_RECOMP_HOST_TOOLS_ONLY=ON -DCMAKE_BUILD_TYPE=Debug
+  # EN: XenonRecomp uses MS-style anonymous aggregates; Clang compiles them
+  #     without patching its upstream submodule.
+  # PT-BR: Clang aceita os agregados anonimos do XenonRecomp sem alterar o upstream.
+  if ! command -v clang++ >/dev/null 2>&1; then
+    echo "BLOCKED: install Clang for the host generators / instale Clang." >&2
+    exit 2
+  fi
+  cmake -S "$root_dir" -B "${root_dir}/build/portable-host-tools" -DUNLEASHED_RECOMP_HOST_TOOLS_ONLY=ON -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
   cmake --build "${root_dir}/build/portable-host-tools" --parallel "$jobs" --target file_to_c x_decompress XenonRecomp XenosRecomp
 fi
 
