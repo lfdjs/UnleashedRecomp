@@ -46,24 +46,32 @@ o codigo do projeto externo.
 
 ## Full Linux game build / Build completo do jogo no Linux
 
-The full build requires your *own legally obtained* \`default.xex\`,
-\`default.xexp\`, \`shader.ar\`, and configured vcpkg/dependencies.
-O build integral requer os tres arquivos provenientes da copia licenciada
-e as dependencias de desenvolvimento/vcpkg corretamente configuradas.
+**EN:** The `linux-debug` preset already defines `VCPKG_ROOT` as
+`thirdparty/vcpkg`. The script now respects that setting and does not
+require a separately exported shell variable. It checks for the vcpkg
+submodule and its bootstrapped executable before compiling the game.
+
+**PT-BR:** O preset `linux-debug` ja configura `VCPKG_ROOT` como
+`thirdparty/vcpkg`. O script agora utiliza essa configuracao sem exigir
+a variavel no shell e verifica se o submodulo e o vcpkg estao prontos.
 
 ~~~bash
-export VCPKG_ROOT=/path/to/vcpkg
+git switch portable
+git pull --ff-only
+git submodule update --init --recursive
+./thirdparty/vcpkg/bootstrap-vcpkg.sh
 bash tools/validate-portable-runtime.sh --full
 ~~~
 
-**EN:** The script reports \`BLOCKED\` and exits with code 2 if mandatory
-game files or the toolchain are missing. It never generates placeholder data.
-A successful compilation still does **not** establish FPS, graphics correctness,
-audio quality or stability in actual game scenes.
+The build still requires legitimately obtained `default.xex`,
+`default.xexp` and `shader.ar` in `UnleashedRecompLib/private/`.
+O build exige esses tres arquivos da copia licenciada do jogo.
 
-**PT-BR:** O script informa \`BLOCKED\` (codigo 2) quando faltam arquivos
-ou ferramentas; nao cria dados falsos. Compilar corretamente **nao** comprova
-FPS, qualidade grafica, audio ou estabilidade no gameplay.
+**EN:** The script reports `BLOCKED` with an actionable command if
+vcpkg is uninitialized. Success here does not prove full gameplay stability.
+
+**PT-BR:** A ausencia do vcpkg gera `BLOCKED` com a solucao indicada.
+A compilacao bem-sucedida ainda nao comprova estabilidade no gameplay.
 
 ## CI interpretation / Como interpretar os testes
 

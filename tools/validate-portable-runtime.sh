@@ -17,7 +17,7 @@ Usage / Uso: tools/validate-portable-runtime.sh [--sanitizers] [--host-tools] [-
   Padrao: testes Debug + Release independentes dos arquivos do jogo.
   --sanitizers  ASan + UBSan (GCC/Clang).
   --host-tools  Build XenonRecomp/XenosRecomp (initialized submodules needed).
-  --full        Build full Linux game (requires licensed game assets and VCPKG_ROOT).
+  --full        Build Linux game (requires licensed assets and bundled vcpkg).
   --help        Display this usage text / Exibe esta ajuda.
 USAGE
 }
@@ -80,10 +80,35 @@ if [[ "$full_game" == true ]]; then
       exit 2
     fi
   done
-  if [[ -z "${VCPKG_ROOT:-}" || "$(uname -s)" != Linux ]]; then
-    echo "BLOCKED: --full requires Linux and a configured VCPKG_ROOT." >&2
+  # EN: This preset is Linux-only. Reject other hosts before invoking CMake.
+  # PT-BR: O preset atende apenas Linux; rejeita outros sistemas antes do CMake.
+  if [[ "$(uname -s)" != Linux ]]; then
+    echo "BLOCKED: --full with linux-debug requires Linux / exige Linux." >&2
     exit 2
   fi
+
+  # EN: CMakePresets.json already sets VCPKG_ROOT to thirdparty/vcpkg.
+  #     The old shell precheck ran before CMake applied that preset and
+  #     incorrectly rejected otherwise correctly configured Linux builds.
+  # PT-BR: CMakePresets.json ja define VCPKG_ROOT como thirdparty/vcpkg.
+  #     A verificacao anterior ocorria antes de o CMake ler o preset e
+  #     impedia indevidamente a compilacao no Linux.
+  local_vcpkg_root="${root_dir}/thirdparty/vcpkg"
+  if [[ ! -f "${local_vcpkg_root}/scripts/buildsystems/vcpkg.cmake" ]]; then
+    echo "BLOCKED: vcpkg submodule missing / submodulo vcpkg ausente." >&2
+    echo "Run / Execute: git submodule update --init --recursive thirdparty/vcpkg" >&2
+    exit 2
+  fi
+  if [[ ! -x "${local_vcpkg_root}/vcpkg" ]]; then
+    echo "BLOCKED: bundled vcpkg needs bootstrapping / vcpkg precisa ser inicializado." >&2
+    echo "Run / Execute: ./thirdparty/vcpkg/bootstrap-vcpkg.sh" >&2
+    exit 2
+  fi
+
+  # EN: Export the same vcpkg location already used by the Linux preset.
+  # PT-BR: Exporta o mesmo diretorio do vcpkg ja usado no preset Linux.
+  export VCPKG_ROOT="${local_vcpkg_root}"
+  echo "INFO: VCPKG_ROOT=${VCPKG_ROOT} (linux-debug preset)"
   cmake --preset linux-debug -S "$root_dir"
   cmake --build "${root_dir}/out/build/linux-debug" --target UnleashedRecomp --parallel "$jobs"
 fi
