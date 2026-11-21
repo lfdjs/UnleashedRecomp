@@ -82,3 +82,34 @@ standalone checks as a finished Switch or Android port.
 **PT-BR:** A branch "portable" so sera considerada validada integralmente para
 cada destino apos build completo e testes reais. Testes de infraestrutura
 nao representam ports Switch ou Android concluidos.
+
+## Confirmed CI result / Resultado confirmado do CI
+
+**EN — Validation run 2026-11-21:**
+[GitHub Actions run 44961993667](https://github.com/lfdjs/UnleashedRecomp/actions/runs/44961993667)
+finished with **success** for the code revision `3a0f4ee4980be7c47f8f738d19a7e0dc548f8fc3`.
+
+**PT-BR — Validacao em 21/11/2026:**
+A [execucao 44961993667](https://github.com/lfdjs/UnleashedRecomp/actions/runs/44961993667)
+foi concluida com **sucesso** para a revisao de codigo
+`3a0f4ee4980be7c47f8f738d19a7e0dc548f8fc3`.
+
+| Job / Etapa | Result / Resultado |
+|---|---|
+| Ubuntu 24.04, Debug | Passed / Aprovado |
+| Ubuntu 24.04, Release | Passed / Aprovado |
+| Windows Server 2022, Debug | Passed / Aprovado |
+| Windows Server 2022, Release | Passed / Aprovado |
+| Linux AddressSanitizer + UndefinedBehaviorSanitizer | Passed / Aprovado |
+| Linux XenonRecomp/XenosRecomp host generator builds (Clang) | Passed / Aprovado |
+| macOS 14 manual runner | Skipped / Nao executado |
+
+**EN:** The previous GCC failure was isolated to the upstream XenonRecomp
+anonymous C++ aggregate syntax. Using Clang succeeded without changing
+the submodule. This run does **not** validate the full game binary, graphics
+or the Switch runtime; those still require licensed files and actual devices.
+
+**PT-BR:** A falha anterior do GCC era causada pelos agregados C++ anonimos
+do XenonRecomp. O Clang compilou essas ferramentas sem modificar o submodulo.
+Esta execucao **nao** valida o executavel completo, graficos nem o runtime
+do Switch; tais verificacoes dependem dos arquivos licenciados e hardware.
