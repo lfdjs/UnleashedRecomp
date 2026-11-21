@@ -1,5 +1,6 @@
 #include <stdafx.h>
 #include "memory.h"
+#include <portable/memory.h>
 
 #if defined(__SWITCH__)
 #include <cstring>
@@ -161,16 +162,17 @@ bool MapSwitchProcessMemoryRange(Memory& memory, size_t offset, size_t size) noe
 Memory::Memory()
 {
 #ifdef _WIN32
-    base = (uint8_t*)VirtualAlloc((void*)0x100000000ull, PPC_MEMORY_SIZE, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-
-    if (base == nullptr)
-        base = (uint8_t*)VirtualAlloc(nullptr, PPC_MEMORY_SIZE, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-
-    if (base == nullptr)
+    // EN: Allocate/guard guest memory via the portable desktop backend.
+    // PT-BR: Aloca/protege a memoria do jogo pelo backend desktop compartilhado.
+    const auto region = portable::memory::AllocateDesktop(PPC_MEMORY_SIZE);
+    base = static_cast<uint8_t*>(region.base);
+    if (!base) return;
+    if (!portable::memory::ProtectNull(region, 4096))
+    {
+        portable::memory::ReleaseDesktop(region);
+        base = nullptr;
         return;
-
-    DWORD oldProtect;
-    VirtualProtect(base, 4096, PAGE_NOACCESS, &oldProtect);
+    }
 #elif defined(__SWITCH__)
     CaptureSwitchMemoryRegions(*this);
 
@@ -238,15 +240,17 @@ Memory::Memory()
 
     switchInitFailureReason = nullptr;
 #else
-    base = (uint8_t*)mmap((void*)0x100000000ull, PPC_MEMORY_SIZE, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0);
-
-    if (base == (uint8_t*)MAP_FAILED)
-        base = (uint8_t*)mmap(NULL, PPC_MEMORY_SIZE, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0);
-
-    if (base == nullptr)
+    // EN: Allocate/guard guest memory via the portable desktop backend.
+    // PT-BR: Aloca/protege a memoria do jogo pelo backend desktop compartilhado.
+    const auto region = portable::memory::AllocateDesktop(PPC_MEMORY_SIZE);
+    base = static_cast<uint8_t*>(region.base);
+    if (!base) return;
+    if (!portable::memory::ProtectNull(region, 4096))
+    {
+        portable::memory::ReleaseDesktop(region);
+        base = nullptr;
         return;
-
-    mprotect(base, 4096, PROT_NONE);
+    }
 #endif
 
     for (size_t i = 0; PPCFuncMappings[i].guest != 0; i++)

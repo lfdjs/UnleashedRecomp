@@ -1,0 +1,22 @@
+name: Portable Runtime unit tests
+on:
+  push:
+    branches: [portable]
+    paths: ["UnleashedRecomp/portable/**", "UnleashedRecomp/kernel/memory.cpp", "UnleashedRecomp/user/paths.cpp", "UnleashedRecomp/CMakeLists.txt", ".github/workflows/portable-runtime.yml"]
+  pull_request:
+    paths: ["UnleashedRecomp/portable/**", "UnleashedRecomp/kernel/memory.cpp", "UnleashedRecomp/user/paths.cpp", "UnleashedRecomp/CMakeLists.txt", ".github/workflows/portable-runtime.yml"]
+jobs:
+  portable:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022, macos-14]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S UnleashedRecomp/portable/tests -B build/portable-tests -DCMAKE_BUILD_TYPE=Debug
+      - name: Build
+        run: cmake --build build/portable-tests --config Debug --parallel 2
+      - name: Test
+        run: ctest --test-dir build/portable-tests -C Debug --output-on-failure

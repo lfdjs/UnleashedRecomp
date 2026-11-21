@@ -249,6 +249,9 @@ set(UNLEASHED_RECOMP_THIRDPARTY_INCLUDES
 
 set_source_files_properties(${UNLEASHED_RECOMP_THIRDPARTY_SOURCES} PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
 
+# EN: Desktop and Switch builds share the portable platform backend.
+# PT-BR: Builds desktop e Switch compartilham o backend de plataforma.
+set(UNLEASHED_RECOMP_PORTABLE_CXX_SOURCES "portable/memory.cpp" "portable/filesystem.cpp")
 set(UNLEASHED_RECOMP_CXX_SOURCES
     "app.cpp"
     "exports.cpp"
@@ -259,6 +262,7 @@ set(UNLEASHED_RECOMP_CXX_SOURCES
     "stdafx.cpp"
     "version.cpp"
     
+    ${UNLEASHED_RECOMP_PORTABLE_CXX_SOURCES}
     ${UNLEASHED_RECOMP_KERNEL_CXX_SOURCES}
     ${UNLEASHED_RECOMP_LOCALE_CXX_SOURCES}
     ${UNLEASHED_RECOMP_OS_CXX_SOURCES}
@@ -386,7 +390,7 @@ if (UNLEASHED_RECOMP_SWITCH)
     set(UNLEASHED_RECOMP_HOST_FILE_TO_C "${UNLEASHED_RECOMP_HOST_TOOLS_DIR}/tools/file_to_c/file_to_c" CACHE FILEPATH "Host file_to_c executable.")
     set(UNLEASHED_RECOMP_HOST_X_DECOMPRESS "${UNLEASHED_RECOMP_HOST_TOOLS_DIR}/tools/x_decompress/x_decompress" CACHE FILEPATH "Host x_decompress executable.")
     set(UNLEASHED_RECOMP_HOST_XENON_RECOMP "${UNLEASHED_RECOMP_HOST_TOOLS_DIR}/tools/XenonRecomp/XenonRecomp/XenonRecomp" CACHE FILEPATH "Host XenonRecomp executable.")
-    set(UNLEASHED_RECOMP_HOST_XENOS_RECOMP "${UNLEASHED_RECOMP_HOST_TOOLS_DIR}/tools/XenosRecomp/XenosRecomp/XenonRecomp" CACHE FILEPATH "Host XenosRecomp executable.")
+    set(UNLEASHED_RECOMP_HOST_XENOS_RECOMP "${UNLEASHED_RECOMP_HOST_TOOLS_DIR}/tools/XenosRecomp/XenosRecomp/XenosRecomp" CACHE FILEPATH "Host XenosRecomp executable.")
 
     target_compile_definitions(UnleashedRecomp PRIVATE
         "UNLEASHED_RECOMP_SWITCH"
