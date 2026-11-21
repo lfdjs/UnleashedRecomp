@@ -70,6 +70,36 @@ if [[ "$host_tools" == true ]]; then
   cmake --build "${root_dir}/build/portable-host-tools" --parallel "$jobs" --target file_to_c x_decompress XenonRecomp XenosRecomp
 fi
 
+
+# EN: Verify system GTK 3 development metadata before configuring the full
+#     Linux desktop game; the native file dialog backend requires gtk+-3.0.
+# PT-BR: Confere os metadados do GTK 3 de desenvolvimento antes do build
+#     Linux; o seletor nativo de arquivos depende de gtk+-3.0.
+check_linux_gtk3() {
+  if ! command -v pkg-config >/dev/null 2>&1; then
+    echo "BLOCKED: pkg-config is missing / pkg-config nao encontrado." >&2
+    echo "Install / Instale: pkgconf (Arch/Fedora) or pkg-config (Debian/Ubuntu)." >&2
+    return 2
+  fi
+
+  # EN: Check the exact pkg-config module requested by nativefiledialog.
+  # PT-BR: Consulta o modulo exato usado pelo nativefiledialog.
+  if ! pkg-config --exists "gtk+-3.0"; then
+    echo "BLOCKED: GTK 3 development files not detected (gtk+-3.0)." >&2
+    echo "BLOQUEADO: arquivos de desenvolvimento GTK 3 nao encontrados." >&2
+    echo "  Ubuntu/Debian/Mint: sudo apt install libgtk-3-dev" >&2
+    echo "  Fedora:             sudo dnf install gtk3-devel" >&2
+    echo "  Arch/Manjaro:       sudo pacman -S gtk3" >&2
+    echo "  Check / Verifique:  pkg-config --modversion gtk+-3.0" >&2
+    echo "  If installed in a custom prefix, inspect PKG_CONFIG_PATH." >&2
+    echo "  Se instalado fora dos caminhos padrao, confira PKG_CONFIG_PATH." >&2
+    return 2
+  fi
+
+  # EN: Print the package version for reproducible Linux build reports.
+  # PT-BR: Registra a versao para relatorios de compilacao reproduziveis.
+  echo "INFO: GTK 3 found / encontrado: $(pkg-config --modversion gtk+-3.0)"
+}
 if [[ "$full_game" == true ]]; then
   # EN: Block misleading builds when licensed Xbox 360 inputs are absent.
   # PT-BR: Impede builds enganosos sem arquivos licenciados do Xbox 360.
@@ -86,6 +116,12 @@ if [[ "$full_game" == true ]]; then
     echo "BLOCKED: --full with linux-debug requires Linux / exige Linux." >&2
     exit 2
   fi
+
+  # EN: Fail early with actionable package instructions instead of
+  #     a long CMake pkg_check_modules stack trace.
+  # PT-BR: Falha antecipadamente com instrucoes claras, antes de
+  #     aparecer a pilha de erros do pkg_check_modules do CMake.
+  check_linux_gtk3
 
   # EN: CMakePresets.json already sets VCPKG_ROOT to thirdparty/vcpkg.
   #     The old shell precheck ran before CMake applied that preset and

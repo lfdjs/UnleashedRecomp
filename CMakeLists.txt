@@ -11,6 +11,15 @@ set(UNLEASHED_RECOMP_TOOLS_ROOT ${CMAKE_SOURCE_DIR}/tools)
 set(CMAKE_CXX_STANDARD 20)
 set(BUILD_SHARED_LIBS OFF)
 
+# EN: Keep CMake option() semantics consistent across third-party subprojects.
+#     Older nested projects may reset CMP0077 to unset when calling
+#     cmake_minimum_required(); the policy default is inherited without
+#     editing any vendored or submodule source files.
+# PT-BR: Mantem a semantica de option() consistente nos subprojetos.
+#     Bibliotecas antigas podem redefinir CMP0077 ao executar
+#     cmake_minimum_required(); este padrao evita alterar o codigo externo.
+set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
+
 # Enable Hot Reload for MSVC compilers if supported.
 if (POLICY CMP0141)
   cmake_policy(SET CMP0141 NEW)

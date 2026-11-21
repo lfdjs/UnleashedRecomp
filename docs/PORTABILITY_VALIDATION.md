@@ -121,3 +121,35 @@ or the Switch runtime; those still require licensed files and actual devices.
 do XenonRecomp. O Clang compilou essas ferramentas sem modificar o submodulo.
 Esta execucao **nao** valida o executavel completo, graficos nem o runtime
 do Switch; tais verificacoes dependem dos arquivos licenciados e hardware.
+
+## Linux GTK 3 dependency / Dependencia GTK 3 no Linux
+
+**EN:** The Linux desktop `nativefiledialog-extended` backend requires the
+`gtk+-3.0` pkg-config development module. Running only the asset-free
+portable unit tests does not check GUI dependencies. The `--full` runner
+now checks GTK 3 before invoking the full game CMake configuration.
+
+**PT-BR:** O backend Linux de `nativefiledialog-extended` exige o modulo
+`gtk+-3.0` do pkg-config. Testes independentes do runtime nao verificam
+as dependencias da interface grafica. A opcao `--full` agora verifica
+o GTK 3 antes de iniciar o CMake do jogo.
+
+~~~bash
+# Ubuntu / Debian / Mint
+sudo apt install libgtk-3-dev
+# Fedora
+sudo dnf install gtk3-devel
+# Arch / Manjaro
+sudo pacman -S gtk3
+
+pkg-config --modversion gtk+-3.0
+bash tools/validate-portable-runtime.sh --full
+~~~
+
+**EN:** The top-level CMake configuration sets `CMAKE_POLICY_DEFAULT_CMP0077`
+to `NEW` to prevent older nested projects from warning about `option()`
+overriding normal variables. No vendored library is modified.
+
+**PT-BR:** O CMake principal define `CMAKE_POLICY_DEFAULT_CMP0077` como
+`NEW` para evitar avisos de `option()` em subprojetos antigos, sem modificar
+o codigo das bibliotecas de terceiros.
