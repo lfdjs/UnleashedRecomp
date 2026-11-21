@@ -1,4 +1,5 @@
 #include <apu/audio.h>
+#include <portable/audio.h>
 #include <cpu/guest_thread.h>
 #include <kernel/heap.h>
 #include <os/logger.h>
@@ -127,9 +128,10 @@ static void AudioThread()
     {
         uint32_t queuedAudioSize = g_audioDevice ? SDL_GetQueuedAudioSize(g_audioDevice) : 0;
         constexpr size_t MAX_LATENCY = 10;
-        const size_t callbackAudioSize = channels * XAUDIO_NUM_SAMPLES * sizeof(float);
-
-        if ((queuedAudioSize / callbackAudioSize) <= MAX_LATENCY)
+        // EN: Share the queue boundary calculation and reject invalid formats.
+        // PT-BR: Compartilha o calculo do buffer e rejeita formatos invalidos.
+        if (portable::audio::NeedsRefill(queuedAudioSize, static_cast<uint32_t>(channels),
+            XAUDIO_NUM_SAMPLES, sizeof(float), MAX_LATENCY))
         {
             if (AreGuestCallbacksEnabled() && g_clientCallback != nullptr)
             {

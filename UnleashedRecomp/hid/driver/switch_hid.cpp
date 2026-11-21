@@ -1,5 +1,6 @@
 #include <stdafx.h>
 #include <hid/hid.h>
+#include <portable/input.h>
 #include <kernel/xdm.h>
 #include <os/logger.h>
 
@@ -20,7 +21,9 @@ namespace
 
     int16_t ScaleStickAxis(s32 value)
     {
-        return static_cast<int16_t>(std::clamp(value, -32768, 32767));
+        // EN: Use the same Xbox axis saturation rules across device drivers.
+        // PT-BR: Usa os mesmos limites dos eixos Xbox para todos os drivers.
+        return portable::input::ClampAxis(value);
     }
 
     void TranslateButton(u64 buttons, HidNpadButton source, uint16_t target, uint16_t& output)
