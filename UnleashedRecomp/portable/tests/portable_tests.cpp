@@ -4,6 +4,8 @@
 #include "../input.h"
 #include "../threading.h"
 #include "../memory.h"
+#include "../guest_address.h"
+#include <limits>
 #include "../filesystem.h"
 #include <chrono>
 #include <cstdint>
@@ -25,6 +27,30 @@ int main() {
     Check(portable::CurrentCPU() != portable::Cpu::Unknown, "supported desktop architecture");
     Check(portable::BuildCapabilities().desktopWindow, "desktop capabilities");
     Check(portable::graphics::IsCompiled(portable::graphics::Backend::Vulkan), "Vulkan compiled");
+    Check(!portable::graphics::IsCompiled(static_cast<portable::graphics::Backend>(255)),
+        "unknown graphics backend rejected");
+    // EN: Validate guest-address boundaries without allocating 4 GiB.
+    // PT-BR: Valida limites de enderecos do jogo sem alocar 4 GiB.
+    constexpr std::uintptr_t guestBase = 0x100000000ULL;
+    constexpr std::size_t guestBytes = 0x100000000ULL;
+    Check(portable::memory::ContainsHostRange(guestBase, guestBytes, guestBase), "guest base");
+    Check(!portable::memory::ContainsHostRange(guestBase, guestBytes, 0), "null host pointer");
+    Check(!portable::memory::ContainsHostRange(guestBase, guestBytes, guestBase - 1), "address before region");
+    Check(portable::memory::ContainsHostRange(guestBase, guestBytes, guestBase + guestBytes - 1), "last guest byte");
+    Check(!portable::memory::ContainsHostRange(guestBase, guestBytes, guestBase + guestBytes), "guest one-past-end");
+    Check(!portable::memory::ContainsHostRange(guestBase, guestBytes, guestBase + guestBytes - 1, 2), "length beyond guest end");
+    Check(!portable::memory::ContainsHostRange(std::numeric_limits<std::uintptr_t>::max() - 4,
+        guestBytes, std::numeric_limits<std::uintptr_t>::max() - 4), "host address overflow rejected");
+    std::uint32_t offset = 99;
+    Check(portable::memory::TryGuestOffset(guestBase, guestBytes, guestBase + 0x1234, offset) &&
+        offset == 0x1234, "guest address translation");
+    Check(!portable::memory::TryGuestOffset(guestBase, guestBytes, guestBase + guestBytes, offset),
+        "invalid guest address translation");
+    Check(portable::audio::BytesPerBlock(2, 256, 4) == 2048, "audio bytes per block");
+    Check(portable::audio::BytesPerBlock(UINT32_MAX, UINT32_MAX, UINT32_MAX) == 0,
+        "audio overflow rejected");
+    Check(!portable::audio::NeedsRefill(0, UINT32_MAX, UINT32_MAX, UINT32_MAX, 10),
+        "audio refill overflow rejected");
     Check(portable::audio::QueuedBlocks(4096, 2, 256, 4) == 2, "audio queue");
     Check(portable::audio::QueuedBlocks(1, 0, 0, 0) == 0, "audio zero divisor");
     Check(!portable::audio::NeedsRefill(0, 0, 256, 4, 10), "invalid audio");

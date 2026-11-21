@@ -1,5 +1,8 @@
 #pragma once
 
+#include <portable/guest_address.h>
+#include <cstdint>
+
 #if defined(__SWITCH__)
 #include <os/switch_atomic_wait.h>
 #endif
@@ -20,25 +23,52 @@ struct Memory
     bool CommitHostRange(const void* host, size_t size) noexcept;
 #endif
 
+    /**
+     * EN: Check host-pointer membership using integer offsets rather than
+     *     comparing pointers to unrelated host allocations.
+     * PT-BR: Verifica se o ponteiro pertence ao espaco do jogo por offsets
+     *     inteiros, sem comparar ponteiros de alocacoes independentes.
+     */
     bool IsInMemoryRange(const void* host) const noexcept
     {
-        return host >= base && host < (base + PPC_MEMORY_SIZE);
+        return portable::memory::ContainsHostRange(
+            reinterpret_cast<uintptr_t>(base), PPC_MEMORY_SIZE,
+            reinterpret_cast<uintptr_t>(host));
     }
 
+    /**
+     * EN: Translate a 32-bit guest address into the host reservation.
+     *     Offset zero deliberately maps to the guarded first guest page.
+     * PT-BR: Traduz um endereco do jogo para a reserva do host.
+     *     O offset zero aponta intencionalmente para a pagina protegida.
+     */
     void* Translate(size_t offset) const noexcept
     {
-        if (offset)
-            assert(offset < PPC_MEMORY_SIZE);
+        assert(base != nullptr && offset < PPC_MEMORY_SIZE);
+        if (base == nullptr || offset >= PPC_MEMORY_SIZE)
+            return nullptr;
 
         return base + offset;
     }
 
+    /**
+     * EN: Convert a valid host pointer back to an Xbox guest offset;
+     *     null and invalid pointers return zero (with a debug assertion
+     *     for invalid non-null addresses).
+     * PT-BR: Converte um ponteiro valido para o offset Xbox; ponteiros
+     *     nulos ou invalidos retornam zero, com assert no modo debug.
+     */
     uint32_t MapVirtual(const void* host) const noexcept
     {
-        if (host)
-            assert(IsInMemoryRange(host));
+        if (host == nullptr)
+            return 0;
 
-        return static_cast<uint32_t>(static_cast<const uint8_t*>(host) - base);
+        uint32_t offset = 0;
+        const bool valid = portable::memory::TryGuestOffset(
+            reinterpret_cast<uintptr_t>(base), PPC_MEMORY_SIZE,
+            reinterpret_cast<uintptr_t>(host), offset);
+        assert(valid);
+        return valid ? offset : 0;
     }
 
     PPCFunc* FindFunction(uint32_t guest) const noexcept
