@@ -46,3 +46,13 @@ O CI executa testes sem arquivos proprietarios no Linux, macOS e Windows.
 - Cross-platform complete game builds requiring lawful proprietary game assets.
 
 Os itens acima precisam de testes reais antes de considerar qualquer port concluido.
+
+## Cross-build host tools / Ferramentas de compilacao cruzada
+
+- `UNLEASHED_DXC=/path/to/dxc` selects a Linux/macOS executable for app shader headers.
+- `UNLEASHED_SWITCH_HOST_XENOS_RECOMP=/path/to/XenosRecomp` selects a prebuilt
+  **native host executable** for the Xenos shader cache.
+- `UNLEASHED_SWITCH_HOST_TOOLS_BUILD_DIR=/path/to/build` changes the native host-tools build directory.
+- O script usa `dxc` presente no PATH como segunda opcao e preserva o DXC macOS empacotado como fallback.
+- These options do **not** install devkitPro, Mesa NVK, DXC, or proprietary game files.
+  Elas nao instalam devkitPro, Mesa NVK, DXC ou arquivos proprietarios do jogo.

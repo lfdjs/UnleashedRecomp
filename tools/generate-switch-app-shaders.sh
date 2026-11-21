@@ -34,6 +34,8 @@ if [[ ! -x "${dxc}" ]]; then
   exit 1
 fi
 
+# EN: Compile one HLSL entry into a SPIR-V C header using the selected native DXC.
+# PT-BR: Compila um shader HLSL em cabecalho C com SPIR-V usando o DXC nativo.
 compile_shader() {
   local name="$1"
   local target="$2"
@@ -51,10 +53,14 @@ compile_shader() {
     -Vn "g_${name}_spirv"
 }
 
+# EN: Compile a vertex shader with Vulkan Y-axis correction enabled.
+# PT-BR: Compila o vertex shader com ajuste do eixo Y para Vulkan.
 compile_vertex_shader() {
   compile_shader "$1" vs_6_0 -fvk-invert-y -DUNLEASHED_RECOMP
 }
 
+# EN: Compile a fragment/pixel shader for the portable Vulkan pipeline.
+# PT-BR: Compila o pixel shader para o pipeline Vulkan portavel.
 compile_pixel_shader() {
   compile_shader "$1" ps_6_0 -DUNLEASHED_RECOMP
 }
