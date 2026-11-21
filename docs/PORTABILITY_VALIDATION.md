@@ -153,3 +153,50 @@ overriding normal variables. No vendored library is modified.
 **PT-BR:** O CMake principal define `CMAKE_POLICY_DEFAULT_CMP0077` como
 `NEW` para evitar avisos de `option()` em subprojetos antigos, sem modificar
 o codigo das bibliotecas de terceiros.
+
+## Vendor GUI compilation warnings / Avisos de compilacao das bibliotecas de interface
+
+**EN:** The Linux x64 user build of 2026-11-21 reached `[143/143] Linking CXX executable`.
+The supplied compiler excerpt recorded 49 warnings, all `-Wnontrivial-memcall`,
+triggered by upstream Dear ImGui headers and their use by ImPlot.
+This diagnostic concerns use of `memset`/`memcpy` on non-trivially copyable C++
+types. It is not proof of an actual runtime defect, but it should not be
+silenced globally.
+
+**PT-BR:** O build Linux x64 chegou a `[143/143] Linking CXX executable`.
+O log recebido registrou 49 warnings, todos `-Wnontrivial-memcall`,
+originados em codigo upstream do Dear ImGui, inclusive na compilacao do ImPlot.
+O aviso aborda `memset`/`memcpy` em tipos C++ nao trivialmente copiaveis;
+nao prova defeito durante execucao, mas nao deve ser desabilitado globalmente.
+
+The main-game CMake target now **only for Clang**, and **only for the nine
+vendor ImGui/ImPlot translation units**, adds `-Wno-nontrivial-memcall`.
+The upstream third-party submodules are untouched; other compiler warnings
+remain enabled for the game, Plume, portable modules and other dependencies.
+
+O CMake principal aplica `-Wno-nontrivial-memcall` **somente com Clang**
+e **somente aos nove arquivos .cpp externos do ImGui/ImPlot**.
+Os submodulos upstream permanecem intactos; os demais avisos seguem
+ativos para o jogo, Plume, runtime e outras dependencias.
+
+To show the full vendor diagnostics again / Para reativar esses avisos:
+
+~~~bash
+cmake --preset linux-debug -DUNLEASHED_RECOMP_SUPPRESS_VENDOR_GUI_MEMCALL_WARNINGS=OFF
+cmake --build out/build/linux-debug --target UnleashedRecomp --parallel 4
+~~~
+
+To keep the scoped default / Para manter o padrao localizado:
+
+~~~bash
+cmake --preset linux-debug -DUNLEASHED_RECOMP_SUPPRESS_VENDOR_GUI_MEMCALL_WARNINGS=ON
+cmake --build out/build/linux-debug --target UnleashedRecomp --parallel 4
+~~~
+
+**EN:** This is warning-noise management, not a patch to vendor code or a proof
+that memory operations are free of UB. Re-check these diagnostics on vendor
+updates and investigate any new compiler warnings in project sources.
+
+**PT-BR:** A alteracao apenas reduz avisos repetidos, sem garantir que as
+operacoes de memoria sejam seguras. Reavalie os avisos ao atualizar as
+bibliotecas externas e investigue novos warnings nos fontes do projeto.

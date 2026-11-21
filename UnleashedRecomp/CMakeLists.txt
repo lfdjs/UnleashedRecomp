@@ -249,6 +249,35 @@ set(UNLEASHED_RECOMP_THIRDPARTY_INCLUDES
 
 set_source_files_properties(${UNLEASHED_RECOMP_THIRDPARTY_SOURCES} PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
 
+# EN: Clang warns about intentional memset/memcpy patterns in vendored Dear ImGui
+#     and ImPlot. Limit this diagnostic exception to the vendor GUI source
+#     files; all game, portable-runtime and GPU code keeps its warnings.
+# PT-BR: O Clang avisa sobre padroes memset/memcpy nas bibliotecas externas
+#     Dear ImGui e ImPlot. A excecao vale somente para os fontes de interface;
+#     o codigo do jogo, runtime portatil e GPU preserva seus diagnosticos.
+option(UNLEASHED_RECOMP_SUPPRESS_VENDOR_GUI_MEMCALL_WARNINGS
+    "Suppress Clang nontrivial-memcall warnings only for bundled ImGui/ImPlot sources."
+    ON)
+if(UNLEASHED_RECOMP_SUPPRESS_VENDOR_GUI_MEMCALL_WARNINGS
+   AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    set(UNLEASHED_RECOMP_VENDOR_GUI_SOURCES
+        "${UNLEASHED_RECOMP_THIRDPARTY_ROOT}/imgui/backends/imgui_impl_sdl2.cpp"
+        "${UNLEASHED_RECOMP_THIRDPARTY_ROOT}/imgui/imgui.cpp"
+        "${UNLEASHED_RECOMP_THIRDPARTY_ROOT}/imgui/imgui_demo.cpp"
+        "${UNLEASHED_RECOMP_THIRDPARTY_ROOT}/imgui/imgui_draw.cpp"
+        "${UNLEASHED_RECOMP_THIRDPARTY_ROOT}/imgui/imgui_tables.cpp"
+        "${UNLEASHED_RECOMP_THIRDPARTY_ROOT}/imgui/imgui_widgets.cpp"
+        "${UNLEASHED_RECOMP_THIRDPARTY_ROOT}/implot/implot.cpp"
+        "${UNLEASHED_RECOMP_THIRDPARTY_ROOT}/implot/implot_demo.cpp"
+        "${UNLEASHED_RECOMP_THIRDPARTY_ROOT}/implot/implot_items.cpp"
+    )
+    # EN: Append rather than replacing any existing per-file compile flags.
+    # PT-BR: Acrescenta a opcao sem substituir flags anteriores dos fontes.
+    set_property(SOURCE ${UNLEASHED_RECOMP_VENDOR_GUI_SOURCES}
+        APPEND PROPERTY COMPILE_OPTIONS "-Wno-nontrivial-memcall")
+endif()
+
+
 # EN: Desktop and Switch builds share the portable platform backend.
 # PT-BR: Builds desktop e Switch compartilham o backend de plataforma.
 # EN: Shared backends compile on every target; unused platform helpers are stubbed.
