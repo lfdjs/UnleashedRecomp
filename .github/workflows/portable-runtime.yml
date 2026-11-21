@@ -1,25 +1,105 @@
-name: Portable Runtime unit tests
+name: Portable Runtime validation
+
 on:
   push:
     branches: [portable]
-    paths: ["UnleashedRecomp/portable/**", "UnleashedRecomp/kernel/memory.cpp", "UnleashedRecomp/user/paths.cpp", "UnleashedRecomp/CMakeLists.txt", "UnleashedRecomp/apu/driver/sdl2_driver.cpp", "UnleashedRecomp/hid/driver/switch_hid.cpp", "tools/build-switch-nro.sh", "tools/generate-switch-app-shaders.sh", ".github/workflows/portable-runtime.yml"]
+    paths:
+      - "UnleashedRecomp/portable/**"
+      - "UnleashedRecomp/main.cpp"
+      - "UnleashedRecomp/kernel/**"
+      - "UnleashedRecomp/cpu/**"
+      - "UnleashedRecomp/apu/**"
+      - "UnleashedRecomp/hid/**"
+      - "UnleashedRecomp/os/**"
+      - "UnleashedRecomp/user/paths.cpp"
+      - "UnleashedRecomp/CMakeLists.txt"
+      - "tools/validate-portable-runtime.sh"
+      - ".github/workflows/portable-runtime.yml"
   pull_request:
-    paths: ["UnleashedRecomp/portable/**", "UnleashedRecomp/kernel/memory.cpp", "UnleashedRecomp/user/paths.cpp", "UnleashedRecomp/CMakeLists.txt", ".github/workflows/portable-runtime.yml"]
+    paths:
+      - "UnleashedRecomp/portable/**"
+      - "UnleashedRecomp/kernel/**"
+      - "UnleashedRecomp/cpu/**"
+      - "UnleashedRecomp/os/**"
+      - "UnleashedRecomp/CMakeLists.txt"
+      - ".github/workflows/portable-runtime.yml"
+  workflow_dispatch:
+    inputs:
+      run_macos:
+        description: "Try macOS runner / Tentar runner macOS"
+        required: false
+        default: false
+        type: boolean
+
+# EN: Validate the latest branch revision, cancel superseded runs.
+# PT-BR: Valida a revisao mais recente e cancela execucoes obsoletas.
+concurrency:
+  group: portable-runtime-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  portable:
+  portable-units:
+    name: Units (${{ matrix.os }} / ${{ matrix.build_type }})
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, windows-2022, macos-14]
+        os: [ubuntu-24.04, windows-2022]
+        build_type: [Debug, Release]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
-      - name: Verify cross-build scripts parse
+      - name: Shell syntax / Sintaxe bash
         if: runner.os == 'Linux'
-        run: bash -n tools/build-switch-nro.sh && bash -n tools/generate-switch-app-shaders.sh
-      - name: Configure
-        run: cmake -S UnleashedRecomp/portable/tests -B build/portable-tests -DCMAKE_BUILD_TYPE=Debug
-      - name: Build
-        run: cmake --build build/portable-tests --config Debug --parallel 2
-      - name: Test
-        run: ctest --test-dir build/portable-tests -C Debug --output-on-failure
+        shell: bash
+        run: |
+          bash -n tools/build-switch-nro.sh
+          bash -n tools/generate-switch-app-shaders.sh
+          bash -n tools/validate-portable-runtime.sh
+      - name: Configure / Configurar
+        run: cmake -S UnleashedRecomp/portable/tests -B build/portable-tests -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+      - name: Build / Compilar
+        run: cmake --build build/portable-tests --config ${{ matrix.build_type }} --parallel 2
+      - name: Test / Testar
+        run: ctest --test-dir build/portable-tests -C ${{ matrix.build_type }} --output-on-failure
+
+  # EN: Catch memory safety and undefined behavior regressions in the portable tests.
+  # PT-BR: Detecta regressoes de memoria e comportamento indefinido nos testes.
+  portable-sanitizers:
+    name: Linux ASan + UBSan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - run: cmake -S UnleashedRecomp/portable/tests -B build/portable-sanitizers -DCMAKE_BUILD_TYPE=Debug -DPORTABLE_ENABLE_SANITIZERS=ON
+      - run: cmake --build build/portable-sanitizers --parallel 2
+      - run: ctest --test-dir build/portable-sanitizers --output-on-failure
+
+  # EN: Compile native code-generation tools with only their required submodules.
+  # PT-BR: Compila geradores nativos com os submodulos necessarios.
+  host-generators:
+    name: Linux native host generators
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Initialize compiler submodules
+        shell: bash
+        run: git submodule update --init --recursive tools/XenonRecomp tools/XenosRecomp
+      - name: Configure generators
+        run: cmake -S . -B build/host-tools -DUNLEASHED_RECOMP_HOST_TOOLS_ONLY=ON -DCMAKE_BUILD_TYPE=Debug
+      - name: Build generators
+        run: cmake --build build/host-tools --parallel 2 --target file_to_c x_decompress XenonRecomp XenosRecomp
+
+  # EN: Previous macOS jobs were cancelled by the runner; keep manual validation.
+  # PT-BR: Jobs macOS anteriores foram cancelados; mantem validacao manual.
+  macos-manual:
+    if: github.event_name == 'workflow_dispatch' && inputs.run_macos
+    name: macOS manual unit tests
+    runs-on: macos-14
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - run: cmake -S UnleashedRecomp/portable/tests -B build/portable-tests -DCMAKE_BUILD_TYPE=Debug
+      - run: cmake --build build/portable-tests --parallel 2
+      - run: ctest --test-dir build/portable-tests --output-on-failure
