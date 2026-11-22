@@ -77,7 +77,7 @@ game_log="${prefix}-game.log"
   # PT-BR: Registra se IDE/Snap alteram variaveis que influenciam GTK e
   #     GSettings, sem divulgar valores nem caminhos privados nos logs.
   printf "\n--- GTK/GSettings environment / Ambiente GTK ---\n"
-  for setting in GSETTINGS_SCHEMA_DIR GIO_MODULE_DIR GIO_EXTRA_MODULES \\
+  for setting in GSETTINGS_SCHEMA_DIR GIO_MODULE_DIR GIO_EXTRA_MODULES \
       GTK_PATH GTK_EXE_PREFIX LD_LIBRARY_PATH XDG_DATA_DIRS; do
     if [[ -n "${!setting:-}" ]]; then
       printf '%s=set\n' "$setting"
@@ -94,7 +94,7 @@ game_log="${prefix}-game.log"
   #     esquema principal. Uma versao de GTK que a consulta pode abortar.
   printf "\n--- GNOME xsettings schema / Esquema GNOME ---\n"
   if command -v gsettings >/dev/null 2>&1; then
-    for schema in org.gnome.settings-daemon.plugins.xsettings \\
+    for schema in org.gnome.settings-daemon.plugins.xsettings \
         org.gnome.settings-daemon.plugins.xsettings.deprecated; do
       keys="$(gsettings list-keys "$schema" 2>/dev/null || true)"
       if [[ -z "$keys" ]]; then
