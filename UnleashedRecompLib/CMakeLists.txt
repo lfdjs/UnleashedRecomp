@@ -11,6 +11,23 @@ option(
     ${UNLEASHED_RECOMP_SWITCH_PREGENERATED_SHADER_CACHE_DEFAULT}
 )
 
+# EN: When a user has already generated the PPC C++ and shader cache from
+#     their own licensed game copy, permit later UI/runtime-only rebuilds
+#     without rerunning the proprietary-data extractors. This is strictly
+#     opt-in and never creates or downloads game content.
+# PT-BR: Permite recompilar apenas interface/runtime usando PPC e shaders
+#     gerados previamente a partir da propria copia licenciada do jogo.
+#     O modo e opcional e nunca cria ou baixa arquivos do jogo.
+option(UNLEASHED_RECOMP_USE_PREGENERATED_GUEST_SOURCES
+    "Reuse existing generated PPC C++ and shader cache without requiring original Xbox 360 build inputs."
+    OFF)
+
+if(UNLEASHED_RECOMP_SWITCH AND UNLEASHED_RECOMP_USE_PREGENERATED_GUEST_SOURCES)
+    message(FATAL_ERROR
+        "UNLEASHED_RECOMP_USE_PREGENERATED_GUEST_SOURCES is for host desktop builds only. "
+        "For Switch use UNLEASHED_RECOMP_SWITCH_USE_PREGENERATED_SHADERS and the Switch build toolchain.")
+endif()
+
 add_compile_options(
     -fno-strict-aliasing
 )
@@ -63,6 +80,30 @@ foreach(i RANGE 0 260)
     list(APPEND UNLEASHED_RECOMP_PPC_RECOMPILED_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/ppc/ppc_recomp.${i}.cpp")
 endforeach()
 
+if(UNLEASHED_RECOMP_USE_PREGENERATED_GUEST_SOURCES)
+    # EN: Check every generated file before configuring the target. Merely
+    #     having an old game executable is not proof that generated sources
+    #     still exist. Never create placeholder guest code or shaders.
+    # PT-BR: Confere TODOS os fontes gerados antes de configurar o target.
+    #     Um executavel antigo nao prova que os .cpp ainda existam.
+    #     Nao cria arquivos PPC/shader ficticios.
+    include("${CMAKE_SOURCE_DIR}/cmake/VerifyPregeneratedGuestSources.cmake")
+    unleashed_recomp_verify_pregenerated_guest_sources(
+        ${UNLEASHED_RECOMP_PPC_RECOMPILED_SOURCES}
+        "${CMAKE_CURRENT_SOURCE_DIR}/shader/shader_cache.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/shader/shader_cache.h"
+    )
+    message(STATUS
+        "Reusing previously generated PPC sources and shader cache (no original Xbox 360 input files required).")
+    message(WARNING
+        "Reusing old PPC/shader sources: guest recompiler settings and game assets will NOT be regenerated. "
+        "Disable UNLEASHED_RECOMP_USE_PREGENERATED_GUEST_SOURCES when updating SWA.toml, "
+        "recompiler tools, or guest game data.")
+endif()
+
+if(NOT UNLEASHED_RECOMP_USE_PREGENERATED_GUEST_SOURCES)
+    # EN: Normal build: regenerate guest C++ from the user's game assets.
+    # PT-BR: Build normal: regenera C++ a partir dos arquivos do usuario.
 add_custom_command(
     OUTPUT
         "${CMAKE_CURRENT_SOURCE_DIR}/private/default_patched.xex"
@@ -77,7 +118,11 @@ add_custom_command(
         ${UNLEASHED_RECOMP_XENON_RECOMP_DEPENDS}
     USES_TERMINAL
 )
+endif()
 
+if(NOT UNLEASHED_RECOMP_USE_PREGENERATED_GUEST_SOURCES)
+    # EN: Decompress source shaders only when regenerating guest artifacts.
+    # PT-BR: Descomprime shaders somente ao regenerar artefatos guest.
 add_custom_command(
     OUTPUT
         "${CMAKE_CURRENT_SOURCE_DIR}/private/shader_decompressed.ar"
@@ -87,6 +132,7 @@ add_custom_command(
         "${CMAKE_CURRENT_SOURCE_DIR}/private/shader.ar"
         ${UNLEASHED_RECOMP_X_DECOMPRESS_DEPENDS}
 )
+endif()
 
 set(XENOS_RECOMP_ROOT "${UNLEASHED_RECOMP_TOOLS_ROOT}/XenosRecomp/XenosRecomp")
 set(XENOS_RECOMP_INCLUDE "${XENOS_RECOMP_ROOT}/shader_common.h")
@@ -98,6 +144,12 @@ file(GLOB XENOS_RECOMP_SOURCES
 
 if (UNLEASHED_RECOMP_SWITCH AND UNLEASHED_RECOMP_SWITCH_USE_PREGENERATED_SHADERS)
     message(STATUS "Using pre-generated Switch shader cache: ${CMAKE_CURRENT_SOURCE_DIR}/shader/shader_cache.cpp")
+elseif(UNLEASHED_RECOMP_USE_PREGENERATED_GUEST_SOURCES)
+    # EN: Keep a previously generated shader_cache.cpp as a normal source.
+    #     Do not rerun XenosRecomp or require default_patched.xex/shader.ar.
+    # PT-BR: Compila shader_cache.cpp existente sem acionar XenosRecomp
+    #     nem exigir default_patched.xex ou shader.ar.
+    message(STATUS "Using pre-generated desktop shader cache: ${CMAKE_CURRENT_SOURCE_DIR}/shader/shader_cache.cpp")
 else()
     target_compile_definitions(XenosRecomp PRIVATE
         XENOS_RECOMP_INPUT=\"${CMAKE_CURRENT_SOURCE_DIR}/private\"
