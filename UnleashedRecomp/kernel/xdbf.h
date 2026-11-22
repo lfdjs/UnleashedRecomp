@@ -21,19 +21,11 @@ namespace xdbf
      */
     inline EXDBFLanguage GetAssetLanguage(ELanguage language) noexcept
     {
-        switch (language)
-        {
-        case ELanguage::English:
-        case ELanguage::Japanese:
-        case ELanguage::German:
-        case ELanguage::French:
-        case ELanguage::Spanish:
-        case ELanguage::Italian:
-            return static_cast<EXDBFLanguage>(language);
-        case ELanguage::PortugueseBrazil:
-        default:
-            return XDBF_LANGUAGE_ENGLISH;
-        }
+        // EN: Share the same guest-language mapping with XGetLanguage and
+        //     ExGetXConfigSetting, avoiding inconsistent Xbox resource IDs.
+        // PT-BR: Compartilha o mapeamento com XGetLanguage e
+        //     ExGetXConfigSetting para evitar IDs inconsistentes.
+        return static_cast<EXDBFLanguage>(XboxGuestLanguage(language));
     }
 
     inline std::string& FixInvalidSequences(std::string& str)

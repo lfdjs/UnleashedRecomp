@@ -358,7 +358,9 @@ void XamShowMessageBoxUIEx()
 
 uint32_t XGetLanguage()
 {
-    return (uint32_t)Config::Language.Value;
+    // EN: Keep host pt-BR selectable while reporting a valid Xbox language.
+    // PT-BR: Mantém pt-BR na interface e retorna um idioma válido ao Xbox.
+    return XboxGuestLanguage(Config::Language.Value);
 }
 
 uint32_t XGetAVPack()
@@ -501,7 +503,9 @@ uint32_t ExGetXConfigSetting(uint16_t Category, uint16_t Setting, void* Buffer, 
 
                 // XCONFIG_USER_LANGUAGE
                 case 0x0009:
-                    data[0] = ByteSwap((uint32_t)Config::Language.Value);
+                    // EN: XCONFIG_USER_LANGUAGE must use the same supported guest ID.
+                    // PT-BR: XCONFIG_USER_LANGUAGE usa o mesmo ID válido do guest.
+                    data[0] = ByteSwap(XboxGuestLanguage(Config::Language.Value));
                     break;
 
                 // XCONFIG_USER_VIDEO_FLAGS

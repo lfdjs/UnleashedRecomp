@@ -13,6 +13,11 @@
 #include <filesystem>
 #include <iostream>
 #include <string_view>
+#include <string>
+#include <unordered_map>
+// EN: Test the real host-to-Xbox language mapping without game assets.
+// PT-BR: Testa a conversão de idioma sem precisar dos dados do jogo.
+#include "../../locale/locale.h"
 #include <system_error>
 
 static int failures = 0;
@@ -27,6 +32,18 @@ int main() {
     Check(portable::CurrentOS() != portable::HostOS::Unknown, "supported desktop OS");
     Check(portable::CurrentCPU() != portable::Cpu::Unknown, "supported desktop architecture");
     Check(portable::BuildCapabilities().desktopWindow, "desktop capabilities");
+    // EN: Legacy languages keep Xbox IDs 1-6. pt-BR and malformed settings
+    //     must never be exposed as unsupported IDs to the guest engine.
+    // PT-BR: Os seis idiomas originais mantêm IDs 1-6. pt-BR e valores
+    //     inválidos não podem ser enviados diretamente ao motor Xbox.
+    Check(XboxGuestLanguage(ELanguage::English) == 1, "Xbox language English");
+    Check(XboxGuestLanguage(ELanguage::Japanese) == 2, "Xbox language Japanese");
+    Check(XboxGuestLanguage(ELanguage::German) == 3, "Xbox language German");
+    Check(XboxGuestLanguage(ELanguage::French) == 4, "Xbox language French");
+    Check(XboxGuestLanguage(ELanguage::Spanish) == 5, "Xbox language Spanish");
+    Check(XboxGuestLanguage(ELanguage::Italian) == 6, "Xbox language Italian");
+    Check(XboxGuestLanguage(ELanguage::PortugueseBrazil) == 1, "Xbox fallback for pt-BR");
+    Check(XboxGuestLanguage(static_cast<ELanguage>(0)) == 1, "Xbox fallback for invalid language");
     Check(portable::graphics::IsCompiled(portable::graphics::Backend::Vulkan), "Vulkan compiled");
     Check(!portable::graphics::IsCompiled(static_cast<portable::graphics::Backend>(255)),
         "unknown graphics backend rejected");
