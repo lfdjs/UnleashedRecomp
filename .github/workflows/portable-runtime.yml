@@ -25,6 +25,7 @@ on:
       - "thirdparty/CMakeLists.txt"
       - "tools/validate-portable-runtime.sh"
       - "tools/tests/**"
+      - "tools/ptbr-game-text.py"
       - "cmake/ResolveVcpkgRoot.cmake"
       - "CMakeLists.txt"
       - "tools/validate-linux-runtime.sh"
@@ -79,6 +80,9 @@ jobs:
       - name: Check pt-BR translation coverage / Conferir traducao pt-BR
         if: runner.os == 'Linux'
         run: python3 tools/tests/check-pt-br-localization.py
+      - name: Test local pt-BR game text workflow / Testar traducao de recursos
+        if: runner.os == 'Linux'
+        run: python3 tools/tests/test-ptbr-game-text.py
       - name: Configure / Configurar
         run: cmake -S UnleashedRecomp/portable/tests -B build/portable-tests -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
       - name: Build / Compilar
