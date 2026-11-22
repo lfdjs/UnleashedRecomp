@@ -155,8 +155,16 @@ def validate_selection() -> None:
     # PT-BR: Recursos XDBF do Xbox possuem seis idiomas, nao sete.
     asset_source = read("UnleashedRecomp/kernel/xdbf.h")
     assert "GetAssetLanguage(ELanguage language)" in asset_source
-    assert "case ELanguage::PortugueseBrazil:" in asset_source
-    assert "return XDBF_LANGUAGE_ENGLISH;" in asset_source
+    # EN: The shared mapping now lives in locale.h; XDBF delegates to it.
+    # PT-BR: O mapeamento fica em locale.h; XDBF reutiliza a mesma funcao.
+    assert "XboxGuestLanguage(language)" in asset_source
+    assert "constexpr uint32_t XboxGuestLanguage(ELanguage selected)" in header
+    assert "case ELanguage::PortugueseBrazil:" in header
+    assert "static_cast<uint32_t>(ELanguage::English)" in header
+    imports = read("UnleashedRecomp/kernel/imports.cpp")
+    assert imports.count("XboxGuestLanguage(Config::Language.Value)") == 2, (
+        "Xbox language APIs must share the pt-BR fallback"
+    )
     for relative in [
         "UnleashedRecomp/ui/achievement_menu.cpp",
         "UnleashedRecomp/ui/achievement_overlay.cpp",
