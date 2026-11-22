@@ -1,7 +1,11 @@
 #pragma once
 
 #include <cstdint>
-#include <hid/controller_types.h>
+// EN: Resolve from the adjacent UI directory in both the standalone
+//     portable tests and the full game's include-path configuration.
+// PT-BR: Caminho relativo funciona nos testes independentes e no jogo.
+//     Evita depender de -I exclusivo do CMake principal.
+#include "../hid/controller_types.h"
 
 namespace ui::controller_icons
 {
