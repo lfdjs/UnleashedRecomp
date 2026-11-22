@@ -283,3 +283,63 @@ The asset-free regression fixture tests preset-less generation, Ninja
 regeneration, custom external toolchains, and explicit environment values.
 O teste independente verifica configuracao sem preset, regeneracao Ninja,
 toolchains externos e variaveis fornecidas manualmente.
+
+## Crash investigation 2026-11-22 / Investigacao dos abortos 22/11/2026
+
+**EN:** Two captured Linux reports both finished all asset-free checks with
+`PORTABLE_PREFLIGHT_END|exit_code=0`, but the process exited 134 after
+`terminate called without an active exception`. This is a **process teardown
+failure**, distinct from SDL/Vulkan feature discovery. A normal return from the
+diagnostic path invoked all global C++ destructors even though HostStartup was
+never executed. The `--portable-preflight` command now flushes diagnostics and
+uses `std::_Exit(status)` *only for this diagnostic*, after SDL_Quit, to avoid
+invoking destructors of game subsystems that were never started. Normal gameplay
+shutdown is deliberately unchanged; its correctness has NOT been established.
+
+**PT-BR:** Os dois relatorios registraram todas as verificacoes aprovadas,
+mas o processo terminou com codigo 134 apos `terminate called without an
+active exception`. E uma falha de **encerramento do processo**, independente
+do sucesso ao detectar SDL/Vulkan. A opcao `--portable-preflight` agora
+descarrega os buffers e utiliza `std::_Exit(status)` **apenas no diagnostico**,
+depois de SDL_Quit, evitando destruidores de subsistemas nao inicializados.
+Isso NAO comprova nem corrige o encerramento durante o gameplay.
+
+**EN:** A separate game log aborted with GLib-GIO-ERROR while looking for
+`antialiasing` under `org.gnome.settings-daemon.plugins.xsettings`.
+The host had GTK 3 system libraries, NVIDIA 3060 Ti driver 580.178.04 and
+Vulkan 1.4 loader. This log does NOT show successful Plume device creation.
+GTK/GSettings version or environment mismatch is suspected, not proven.
+The runtime report now includes **only presence**, not values, of potential
+GTK/GIO/Snap environment overrides, and checks the public xsettings schemas.
+
+**PT-BR:** O log do jogo abortou com GLib-GIO-ERROR ao consultar a chave
+`antialiasing` no esquema `xsettings`. Isso indica incompatibilidade
+possivel entre GTK/GSettings ou o ambiente herdado da IDE/Snap; os dados
+ainda nao demonstram a origem exata. O relatorio agora registra somente a
+presenca de variaveis relevantes, nao seus valores, alem dos esquemas
+publicos para diagnosticar a diferenca.
+
+~~~bash
+git switch portable
+git pull --ff-only
+cmake --build out/build/linux-debug --target UnleashedRecomp --parallel 4
+bash tools/validate-linux-runtime.sh
+bash tools/validate-linux-runtime.sh --game
+~~~
+
+**EN:** If the GTK fatal message persists, capture a real debugger backtrace
+from the Linux host; do not alter system GNOME schemas or use sudo to mask it.
+
+**PT-BR:** Se o erro fatal persistir, colete o backtrace real do processo,
+sem modificar os esquemas GNOME do sistema nem iniciar o jogo como root.
+
+~~~bash
+gdb -q --batch -ex "set pagination off" -ex run \
+    -ex "thread apply all bt 25" --args \
+    ./out/build/linux-debug/UnleashedRecomp/UnleashedRecomp
+~~~
+
+The missing schema key alone does not identify the caller: the backtrace is
+needed to distinguish GTK/NFD from other loaded libraries.
+A chave ausente nao identifica quem a consultou: o backtrace e necessario
+para diferenciar GTK/NFD de outras dependencias.

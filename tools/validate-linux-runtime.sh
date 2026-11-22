@@ -71,6 +71,44 @@ game_log="${prefix}-game.log"
   else
     echo "ldd not available / nao disponivel"
   fi
+  # EN: Record whether IDE/Snap sandbox environment overrides can affect
+  #     GTK/GSettings. Values are intentionally not logged to avoid exposing
+  #     unrelated private paths or credentials in shared reports.
+  # PT-BR: Registra se IDE/Snap alteram variaveis que influenciam GTK e
+  #     GSettings, sem divulgar valores nem caminhos privados nos logs.
+  printf "\n--- GTK/GSettings environment / Ambiente GTK ---\n"
+  for setting in GSETTINGS_SCHEMA_DIR GIO_MODULE_DIR GIO_EXTRA_MODULES \\
+      GTK_PATH GTK_EXE_PREFIX LD_LIBRARY_PATH XDG_DATA_DIRS; do
+    if [[ -n "${!setting:-}" ]]; then
+      printf '%s=set\n' "$setting"
+    else
+      printf '%s=unset\n' "$setting"
+    fi
+  done
+  printf 'XDG_SESSION_TYPE=%s\n' "${XDG_SESSION_TYPE:-unknown}"
+  printf 'XDG_CURRENT_DESKTOP=%s\n' "${XDG_CURRENT_DESKTOP:-unknown}"
+
+  # EN: A missing "antialiasing" key is expected on some newer GNOME
+  #     schemas, but a GTK library querying it unconditionally can crash.
+  # PT-BR: Em versoes recentes do GNOME, a chave pode nao existir no
+  #     esquema principal. Uma versao de GTK que a consulta pode abortar.
+  printf "\n--- GNOME xsettings schema / Esquema GNOME ---\n"
+  if command -v gsettings >/dev/null 2>&1; then
+    for schema in org.gnome.settings-daemon.plugins.xsettings \\
+        org.gnome.settings-daemon.plugins.xsettings.deprecated; do
+      keys="$(gsettings list-keys "$schema" 2>/dev/null || true)"
+      if [[ -z "$keys" ]]; then
+        printf '%s: missing-or-empty\n' "$schema"
+      elif grep -Fxq antialiasing <<< "$keys"; then
+        printf '%s: antialiasing-present\n' "$schema"
+      else
+        printf '%s: antialiasing-absent\n' "$schema"
+      fi
+    done
+  else
+    echo "gsettings unavailable / comando gsettings indisponivel"
+  fi
+
   printf "\n--- Vulkan summary / Resumo Vulkan ---\n"
   if command -v vulkaninfo >/dev/null 2>&1; then
     if command -v timeout >/dev/null 2>&1; then
@@ -110,4 +148,20 @@ set -e
 printf "game_exit=%d\n" "$game_status" >>"$result_file"
 printf "INFO: game log / log de jogo: %s\n" "$game_log"
 printf "INFO: game exit / saida: %s\n" "$game_status"
+
+# EN: A GTK GSettings fatal abort is an environment/GUI initialization issue,
+#     not proof that the Vulkan renderer failed. Provide a safe diagnostic,
+#     without editing GNOME system schemas or overwriting game files.
+# PT-BR: Abortos fatais do GSettings ocorrem na inicializacao GTK/GUI,
+#     nao comprovam falha do Vulkan. Sugere diagnosticos sem alterar os
+#     esquemas GNOME nem os arquivos do jogo.
+if grep -Fq "does not contain a key named 'antialiasing'" "$game_log"; then
+  echo "WARNING: GTK/GSettings antialiasing schema mismatch detected."
+  echo "AVISO: incompatibilidade GTK/GSettings na chave antialiasing."
+  echo "Review / Confira: $system_report"
+  echo "Try launching from a normal system terminal outside a Snap/IDE sandbox."
+  echo "Tente executar a partir de terminal nativo, fora de IDE/Snap."
+  echo "Do NOT edit or recompile system GNOME schemas to silence this error."
+  echo "NAO edite nem recompile schemas GNOME do sistema para ocultar o erro."
+fi
 exit "$game_status"

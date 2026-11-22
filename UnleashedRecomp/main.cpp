@@ -1,5 +1,7 @@
 #include <stdafx.h>
 #include <cstring> // EN/PT-BR: Declares std::strcmp for diagnostic CLI argument parsing.
+#include <cstdio>  // EN/PT-BR: Enables explicit flushing of diagnostic logs.
+#include <cstdlib> // EN/PT-BR: Provides std::_Exit for diagnostic-only termination.
 #ifdef __x86_64__
 #include <cpuid.h>
 #endif
@@ -312,6 +314,16 @@ void init()
 
 int main(int argc, char *argv[])
 {
+#if defined(__linux__) && !defined(__SWITCH__)
+    // EN: When launched through "tee" or a log-capturing shell pipeline,
+    //     make startup logs line-buffered. A GTK fatal error otherwise
+    //     discards buffered diagnostics before the crash is reported.
+    // PT-BR: Mantem logs de inicializacao visiveis mesmo quando a saida
+    //     e capturada por um pipe. Erros fatais do GTK podem descartar
+    //     mensagens que ficaram no buffer.
+    std::setvbuf(stdout, nullptr, _IOLBF, 0);
+#endif
+
     // EN: The explicit --portable-preflight path probes this native host without
     //     opening the installer, downloading updates or loading game content.
     // PT-BR: A opcao --portable-preflight verifica o host sem executar o
@@ -319,8 +331,24 @@ int main(int argc, char *argv[])
     for (int i = 1; i < argc; ++i)
     {
         if (std::strcmp(argv[i], "--portable-preflight") == 0)
-            return portable::diagnostics::RunHostPreflight(
+        {
+            const int status = portable::diagnostics::RunHostPreflight(
                 g_memory.base != nullptr, GetUserPath());
+
+            // EN: This branch intentionally bypasses game-global C++ destructors.
+            //     Preflight never performs HostStartup/KiSystemStartup; normal
+            //     static teardown can terminate on threads owned by inactive
+            //     subsystems. SDL has already been shut down in the preflight.
+            //     This is NOT a fix for normal gameplay shutdown; debug that
+            //     separately if it also fails.
+            // PT-BR: Somente o diagnostico evita destruidores globais do jogo.
+            //     Ele nao executa HostStartup/KiSystemStartup, e a destruicao
+            //     dos subsistemas nao inicializados pode abortar o processo.
+            //     O SDL ja foi encerrado; isto NAO corrige o desligamento do
+            //     jogo, que deve ser investigado separadamente se falhar.
+            std::fflush(nullptr);
+            std::_Exit(status);
+        }
     }
 
 #ifdef _WIN32
