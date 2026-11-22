@@ -112,3 +112,24 @@ Esse modo desativa explicitamente a opção de reaproveitamento.
 **EN:** When guest code, recompiler configuration or game data changes,
 disable the reuse mode and regenerate from the legally obtained sources.
 Do not commit game inputs or generated outputs containing licensed data.
+
+## Textos que pertencem ao jogo / Game-owned text resources
+
+**PT-BR:** A localização do port e os arquivos de mensagens originais
+do Xbox 360 são camadas diferentes. Quando Português (Brasil) está ativo,
+o runtime informa **inglês** ao jogo pelas APIs XGetLanguage e
+ExGetXConfigSetting, preservando os IDs originais e evitando acessar
+um idioma inexistente. Traduções de diálogos devem substituir os
+recursos ingleses por meio de um mod de dados compatível.
+
+**EN:** Guest code still uses its original six Xbox 360 language IDs.
+The shared XboxGuestLanguage mapping converts the pt-BR host locale to
+English for guest language and achievement resource calls; a compatible
+data mod can then override the English game assets with Portuguese text.
+
+**PT-BR:** O inventário de recursos, a tradução local de XTB/XML e as
+instruções sobre FCO/FTE estão em [Tradução de recursos do jogo](GAME_TRANSLATION_PT_BR.md).
+Não há diálogos ou legendas originais do jogo incluídos neste repositório.
+
+**EN:** See [Game asset translation workflow](GAME_TRANSLATION_PT_BR.md)
+for local XTB editing, resource inventory, and FCO/FTE limitations.
