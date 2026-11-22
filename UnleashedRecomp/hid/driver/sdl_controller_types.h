@@ -32,6 +32,31 @@ namespace hid::sdl
     }
 
     /**
+     * EN: Stable human-readable device name for logs and preflight reports.
+     * PT-BR: Nome legível do dispositivo para logs e diagnósticos.
+     */
+    constexpr const char* ModelName(SDL_GameControllerType type) noexcept
+    {
+        switch (Identify(type))
+        {
+        case EInputDeviceExplicit::Xbox360: return "Xbox 360";
+        case EInputDeviceExplicit::XboxOne: return "Xbox One";
+        case EInputDeviceExplicit::DualShock3: return "DualShock 3";
+        case EInputDeviceExplicit::DualShock4: return "DualShock 4";
+        case EInputDeviceExplicit::DualSense: return "DualSense";
+        case EInputDeviceExplicit::SwitchPro: return "Nintendo Switch Pro";
+        case EInputDeviceExplicit::SwitchJCLeft: return "Nintendo Switch Joy-Con (Left)";
+        case EInputDeviceExplicit::SwitchJCRight: return "Nintendo Switch Joy-Con (Right)";
+        case EInputDeviceExplicit::SwitchJCPair: return "Nintendo Switch Joy-Con (Pair)";
+        case EInputDeviceExplicit::Luna: return "Amazon Luna";
+        case EInputDeviceExplicit::Stadia: return "Google Stadia";
+        case EInputDeviceExplicit::NvShield: return "NVIDIA Shield";
+        case EInputDeviceExplicit::Virtual: return "Virtual Controller";
+        default: return "Unknown SDL Controller";
+        }
+    }
+
+    /**
      * EN: The current UI has PlayStation and Xbox prompt textures only.
      *     Nintendo input is mapped to Xbox prompts until a Nintendo atlas
      *     is provided; the actual device name remains accurate.

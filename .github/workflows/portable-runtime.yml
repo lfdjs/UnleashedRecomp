@@ -106,6 +106,16 @@ jobs:
           clang++ -std=c++20 -Wall -Wextra -Werror -IUnleashedRecomp \
             $(pkg-config --cflags sdl2) -fsyntax-only \
             UnleashedRecomp/portable/diagnostics.cpp
+      - name: Validate DualShock, DualSense and Nintendo SDL classification
+        shell: bash
+        run: |
+          # EN: Compile with system SDL2, no physical controller required.
+          # PT-BR: Compila com SDL2 do runner, sem controles físicos.
+          clang++ -std=c++20 -Wall -Wextra -Werror -IUnleashedRecomp \
+            $(pkg-config --cflags sdl2) \
+            tools/tests/test-sdl-controller-types.cpp \
+            $(pkg-config --libs sdl2) -o "${RUNNER_TEMP}/controller-model-tests"
+          "${RUNNER_TEMP}/controller-model-tests"
       - name: Link and exercise SDL preflight without game assets
         shell: bash
         env:

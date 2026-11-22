@@ -2,6 +2,7 @@
 
 #include "memory.h"
 #include "platform.h"
+#include <hid/driver/sdl_controller_types.h>
 
 #include <SDL.h>
 #include <SDL_vulkan.h>
@@ -140,8 +141,19 @@ namespace portable::diagnostics
             const int count = SDL_NumJoysticks();
             std::printf("PORTABLE_INFO|controllers|connected=%d\n", count);
             for (int i = 0; i < std::min(count, 8); ++i)
-                std::printf("PORTABLE_INFO|controller_%d|%s\n", i,
-                    SafeText(SDL_JoystickNameForIndex(i)));
+            {
+                // EN: Report SDL recognition and the detected controller
+                //     family without opening any game, installer or saves.
+                // PT-BR: Mostra se o SDL reconhece DS4, DualSense, Pro
+                //     ou Joy-Con, sem iniciar o jogo nem tocar nos saves.
+                const bool mapped = SDL_IsGameController(i) == SDL_TRUE;
+                const auto type = mapped
+                    ? SDL_GameControllerTypeForIndex(i)
+                    : SDL_CONTROLLER_TYPE_UNKNOWN;
+                std::printf("PORTABLE_INFO|controller_%d|name=%s|mapped=%d|model=%s|type=%d\n",
+                    i, SafeText(SDL_JoystickNameForIndex(i)), mapped ? 1 : 0,
+                    hid::sdl::ModelName(type), static_cast<int>(type));
+            }
         }
         else
         {
