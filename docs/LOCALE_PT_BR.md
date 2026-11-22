@@ -72,3 +72,43 @@ O título da interface, botões e mensagens do port permanecem em pt-BR.
 **EN:** The original XDBF files contain only six supported asset languages.
 With the pt-BR interface selected, achievement names and descriptions use
 English XDBF content as a safe fallback. Port UI labels remain Portuguese.
+
+## Recompilar sem default.xex / Rebuilding without default.xex
+
+**PT-BR:** Se o instalador já foi compilado anteriormente, mas o Ninja agora
+reclama de `UnleashedRecompLib/private/default.xex`, isso significa que o
+gerador de código PPC continua dependendo da entrada original. O executável
+antigo pode abrir normalmente mesmo após um erro de compilação; isso
+**não** comprova que a tradução nova está presente.
+
+**EN:** A successful launch after Ninja reports a missing `default.xex`
+can be the *old* binary. The normal generator depends on the user's
+licensed `default.xex`, `default.xexp` and `shader.ar`.
+
+**PT-BR:** Agora é possível reconstruir apenas a aplicação e interface
+usando os **261 arquivos `ppc_recomp.N.cpp`**, os cabeçalhos gerados e
+o cache de shaders da compilação anterior, caso todos ainda existam.
+Este modo é opcional e valida o conjunto antes de alterar a configuração.
+Não cria conteúdos originais do jogo nem baixa arquivos licenciados.
+
+**EN:** Source-only rebuilds reuse previously generated PPC and shader files
+from an earlier licensed build. The option checks every expected generated
+file and refuses to run with missing or empty data. Guest code and shaders
+are **not regenerated** in this mode.
+
+~~~bash
+git switch portable
+git pull --ff-only
+python3 tools/tests/check-pt-br-localization.py
+bash tools/build-linux-reuse-generated.sh
+bash tools/validate-linux-runtime.sh --game
+~~~
+
+**PT-BR:** Se o script informar arquivos `ppc` ou `shader_cache.cpp`
+ausentes, restaure os originais da sua própria cópia e execute o build
+integral: `bash tools/validate-portable-runtime.sh --full`.
+Esse modo desativa explicitamente a opção de reaproveitamento.
+
+**EN:** When guest code, recompiler configuration or game data changes,
+disable the reuse mode and regenerate from the legally obtained sources.
+Do not commit game inputs or generated outputs containing licensed data.

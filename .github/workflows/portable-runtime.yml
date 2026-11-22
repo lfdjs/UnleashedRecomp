@@ -16,6 +16,10 @@ on:
       - "UnleashedRecomp/locale/**"
       - "UnleashedRecomp/user/config.cpp"
       - "UnleashedRecomp/CMakeLists.txt"
+      - "UnleashedRecompLib/CMakeLists.txt"
+      - "cmake/VerifyPregeneratedGuestSources.cmake"
+      - "tools/build-linux-reuse-generated.sh"
+      - "tools/tests/test-pregenerated-guest-sources.sh"
       - "UnleashedRecomp/locale/**"
       - "UnleashedRecomp/user/config.cpp"
       - "thirdparty/CMakeLists.txt"
@@ -69,6 +73,9 @@ jobs:
           bash -n tools/tests/test-vcpkg-regeneration.sh
           bash tools/tests/test-vcpkg-regeneration.sh
           bash -n tools/validate-linux-runtime.sh
+          bash -n tools/build-linux-reuse-generated.sh
+          bash -n tools/tests/test-pregenerated-guest-sources.sh
+          bash tools/tests/test-pregenerated-guest-sources.sh
       - name: Check pt-BR translation coverage / Conferir traducao pt-BR
         if: runner.os == 'Linux'
         run: python3 tools/tests/check-pt-br-localization.py

@@ -162,7 +162,11 @@ if [[ "$full_game" == true ]]; then
   # PT-BR: Exporta o mesmo diretorio do vcpkg ja usado no preset Linux.
   export VCPKG_ROOT="${local_vcpkg_root}"
   echo "INFO: VCPKG_ROOT=${VCPKG_ROOT} (linux-debug preset)"
-  cmake --preset linux-debug -S "$root_dir"
+  # EN: --full explicitly regenerates from the original licensed inputs,
+  #     even if a previous source-only build enabled pre-generated mode.
+  # PT-BR: --full regenera usando a copia licenciada, desativando
+  #     explicitamente um modo de reaproveitamento anterior.
+  cmake --preset linux-debug -S "$root_dir" -DUNLEASHED_RECOMP_USE_PREGENERATED_GUEST_SOURCES=OFF
   cmake --build "${root_dir}/out/build/linux-debug" --target UnleashedRecomp --parallel "$jobs"
 fi
 echo "PASS / APROVADO: all selected validations finished."

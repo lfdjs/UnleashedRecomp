@@ -47,6 +47,26 @@ if [[ "$(uname -s)" != "Linux" ]]; then
   exit 2
 fi
 
+# EN: If source localization files are newer than the executable, the
+#     previous game binary may still launch despite a failed Ninja build.
+#     Emit a clear warning rather than claiming the new translation ran.
+# PT-BR: Se os arquivos da traducao forem mais novos que o executavel,
+#     um binario antigo ainda podera abrir mesmo apos uma falha do Ninja.
+#     Avisa explicitamente sem afirmar que a traducao nova foi testada.
+if [[ "$mode" == game ]]; then
+  for source in \
+    "${root_dir}/UnleashedRecomp/locale/locale.cpp" \
+    "${root_dir}/UnleashedRecomp/locale/config_locale.cpp" \
+    "${root_dir}/UnleashedRecomp/ui/installer_wizard.cpp"; do
+    if [[ -f "$source" && "$source" -nt "$game_bin" ]]; then
+      echo "WARNING: executable predates UI sources; the build may be stale."
+      echo "AVISO: o executavel e anterior aos fontes da interface. Traducoes podem nao aparecer."
+      echo "Try / Tente: bash tools/build-linux-reuse-generated.sh"
+      break
+    fi
+  done
+fi
+
 # EN: Never overwrite an earlier diagnostic session; use timestamp and PID.
 # PT-BR: Cada execucao usa data e PID, preservando relatorios anteriores.
 mkdir -p "$report_dir"
