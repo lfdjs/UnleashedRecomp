@@ -14,6 +14,9 @@ on:
       - "UnleashedRecomp/user/paths.cpp"
       - "UnleashedRecomp/CMakeLists.txt"
       - "tools/validate-portable-runtime.sh"
+      - "tools/tests/**"
+      - "cmake/ResolveVcpkgRoot.cmake"
+      - "CMakeLists.txt"
       - "tools/validate-linux-runtime.sh"
       - ".github/workflows/portable-runtime.yml"
   pull_request:
@@ -57,6 +60,8 @@ jobs:
           bash -n tools/build-switch-nro.sh
           bash -n tools/generate-switch-app-shaders.sh
           bash -n tools/validate-portable-runtime.sh
+          bash -n tools/tests/test-vcpkg-regeneration.sh
+          bash tools/tests/test-vcpkg-regeneration.sh
           bash -n tools/validate-linux-runtime.sh
       - name: Configure / Configurar
         run: cmake -S UnleashedRecomp/portable/tests -B build/portable-tests -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}

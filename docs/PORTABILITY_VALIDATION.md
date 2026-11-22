@@ -249,3 +249,37 @@ the game normally to record its exit code.
 **PT-BR:** A execucao do jogo e opcional (`--game`) e sem limite de tempo.
 Os logs podem revelar caminhos e nomes de dispositivos; revise-os antes
 de publicar. Teste menus e uma fase e feche o jogo normalmente.
+
+## Ninja incremental CMake regeneration / Regeneracao incremental pelo Ninja
+
+**EN:** CMake presets export `VCPKG_ROOT` for the initial configure only.
+When `cmake --build out/build/linux-debug` invokes Ninja, the generator may
+re-run CMake directly after a source or CMakeLists change. The old top-level
+guard required the shell environment variable even though the configured
+vcpkg toolchain path was already saved in `CMakeCache.txt`.
+
+The new `cmake/ResolveVcpkgRoot.cmake` module runs **before `project()`**.
+It preserves an explicit environment value, otherwise recovers the vcpkg root
+from a cached `CMAKE_TOOLCHAIN_FILE`, or the bundled `thirdparty/vcpkg`
+fallback. Host-only tools and Switch cross-builds remain exempt.
+No third-party submodule files are modified.
+
+**PT-BR:** Os presets exportam `VCPKG_ROOT` somente durante a configuracao.
+Quando o Ninja regenera o CMake em um build incremental, essa variavel pode
+nao existir, embora o toolchain esteja salvo no `CMakeCache.txt`.
+O modulo `cmake/ResolveVcpkgRoot.cmake` e executado **antes de `project()`**;
+prioriza a variavel explicita, depois o toolchain armazenado e, como ultima
+opcao, o vcpkg embutido. Builds de ferramentas nativas e do Switch nao sao
+alterados. Nenhum arquivo de submodulo externo foi modificado.
+
+~~~bash
+git switch portable
+git pull --ff-only
+bash tools/tests/test-vcpkg-regeneration.sh
+cmake --build out/build/linux-debug --target UnleashedRecomp --parallel 4
+~~~
+
+The asset-free regression fixture tests preset-less generation, Ninja
+regeneration, custom external toolchains, and explicit environment values.
+O teste independente verifica configuracao sem preset, regeneracao Ninja,
+toolchains externos e variaveis fornecidas manualmente.

@@ -2,8 +2,16 @@ cmake_minimum_required (VERSION 3.20)
 
 option(UNLEASHED_RECOMP_HOST_TOOLS_ONLY "Only build host-side generation tools." OFF)
 
-if(NOT UNLEASHED_RECOMP_SWITCH AND NOT UNLEASHED_RECOMP_HOST_TOOLS_ONLY AND NOT DEFINED ENV{VCPKG_ROOT})
-    message(FATAL_ERROR "VCPKG_ROOT is not defined!")
+# EN: CMake presets supply VCPKG_ROOT only for the initial configure.
+#     Ninja regenerates build.ninja by invoking CMake without the preset
+#     environment. Recover the same root from the cached toolchain or the
+#     bundled submodule on every configure, before calling project().
+# PT-BR: O preset define VCPKG_ROOT apenas na configuracao inicial.
+#     O Ninja regenera build.ninja chamando CMake sem o ambiente do preset.
+#     Recupera o mesmo vcpkg do toolchain em cache ou do submodulo antes
+#     de executar project(), inclusive em builds incrementais.
+if(NOT UNLEASHED_RECOMP_SWITCH AND NOT UNLEASHED_RECOMP_HOST_TOOLS_ONLY)
+    include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/ResolveVcpkgRoot.cmake")
 endif()
 
 set(UNLEASHED_RECOMP_THIRDPARTY_ROOT ${CMAKE_SOURCE_DIR}/thirdparty)
