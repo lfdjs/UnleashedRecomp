@@ -200,3 +200,52 @@ updates and investigate any new compiler warnings in project sources.
 **PT-BR:** A alteracao apenas reduz avisos repetidos, sem garantir que as
 operacoes de memoria sejam seguras. Reavalie os avisos ao atualizar as
 bibliotecas externas e investigue novos warnings nos fontes do projeto.
+
+## Linux host preflight and gameplay report / Diagnostico e relatorio de gameplay Linux
+
+**EN:** Following a successful full Linux build, `--portable-preflight` checks
+the already-reserved guest address space, configured user data directory, SDL
+video/audio initialization, Vulkan loader visibility and controller discovery.
+It exits **before** the installer, update checker, mod loader, game asset loading
+or GPU pipeline creation. It does not write saves or change game settings.
+
+**PT-BR:** Apos compilar o jogo, a opcao `--portable-preflight` verifica
+a memoria guest, o caminho do usuario, inicializacao SDL de video/audio,
+o carregador Vulkan e a descoberta de controles. Ela termina **antes** do
+instalador, atualizador, carregamento dos arquivos do jogo ou pipeline GPU.
+Nao altera saves nem configuracoes.
+
+~~~bash
+git switch portable
+git pull --ff-only
+cmake --build out/build/linux-debug --target UnleashedRecomp --parallel 4
+
+# Check the host and save a report / Verifica o host e salva relatorio
+bash tools/validate-linux-runtime.sh
+
+# Then start the actual game and record stdout / Inicia o jogo e coleta log
+bash tools/validate-linux-runtime.sh --game
+~~~
+
+Reports are written to `build/portable-runtime-reports/` by default.
+Os relatorios sao salvos em `build/portable-runtime-reports/` por padrao.
+
+**EN:** Preflight exit status is a bitmask: `1=guest memory unavailable`,
+`2=SDL video failure`, `4=Vulkan loader failure`, `8=SDL audio failure`,
+`16=invalid user data root`. A missing physical controller is informational.
+Video and Vulkan loader success do **not** validate the Plume swapchain,
+GPU features, shader rendering or gameplay FPS.
+
+**PT-BR:** O retorno do diagnostico utiliza bits: `1=memoria nao reservada`,
+`2=falha SDL video`, `4=falha do loader Vulkan`, `8=falha SDL audio`,
+`16=diretorio de dados ausente`. Nao ter controle conectado nao reprova.
+Vulkan detectado **nao** garante que o Plume renderize corretamente.
+
+**EN:** The game session is opt-in (`--game`) and has no automatic timeout.
+The report may contain system paths and GPU/controller identifiers; review
+it before publicly sharing. Test the menu and an actual stage, then close
+the game normally to record its exit code.
+
+**PT-BR:** A execucao do jogo e opcional (`--game`) e sem limite de tempo.
+Os logs podem revelar caminhos e nomes de dispositivos; revise-os antes
+de publicar. Teste menus e uma fase e feche o jogo normalmente.

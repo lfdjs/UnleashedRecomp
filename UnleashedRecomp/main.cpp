@@ -1,4 +1,5 @@
 #include <stdafx.h>
+#include <cstring> // EN/PT-BR: Declares std::strcmp for diagnostic CLI argument parsing.
 #ifdef __x86_64__
 #include <cpuid.h>
 #endif
