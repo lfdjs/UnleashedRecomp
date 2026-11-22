@@ -121,3 +121,38 @@ cmake -S UnleashedRecomp/portable/tests -B build/portable-runtime-debug
 cmake --build build/portable-runtime-debug
 ctest --test-dir build/portable-runtime-debug --output-on-failure
 ~~~
+
+## Etapa 1B — Priorizar arquivos para extracao / Rank first archive samples
+
+**PT-BR:** O inventario de uma instalacao real encontrou 3.673 arquivos,
+incluindo 755 `.ar.00` e 1.127 `.arl`, mas nenhum `.xtb` solto.
+Isso mostra apenas que as tabelas de mensagens, caso presentes, precisam
+ser procuradas dentro dos arquivos de recursos. O comando abaixo lista
+**candidatos por nome**, sem abrir nem descompactar qualquer arquivo:
+
+~~~bash
+python3 tools/ptbr-game-text.py candidates \
+  --directory "out/build/linux-debug/UnleashedRecomp" --limit 12
+~~~
+
+**EN:** This ranks Town_*_Common first, followed by other Town archives,
+WorldMap, Hint/Tutorial and Application/Title. It reports any matching
+`.arl` sidecar and never asserts that an archive contains a specific file.
+This is a filename-based heuristic, not content inspection.
+
+**PT-BR:** O primeiro candidato recomendado para dialogos de NPCs e
+`game/Town_EuropeanCity_Common.ar.00` (se presente), que a
+documentacao da comunidade identifica como recurso de dialogo da cidade.
+Para extrair arquivos Xbox 360 com XCompression, utilize uma versao do
+**HedgeArcPack com suporte XCompress**. Versoes antigas de ar0unpack
+nao conseguem extrair esses arquivos comprimidos.
+
+- [HedgeArcPack — release XCompress](https://github.com/Radfordhound/HedgeLib/releases/tag/v0.1-xcompress)
+- [Sonic Unleashed — recursos da cidade](https://wiki.vg-resource.com/Sonic_Unleashed_(HD))
+
+**EN/PT-BR:** On Linux, HedgeArcPack.exe can run through Wine (if installed).
+The supported command-line shape is `-E Gens input output`. Copy the
+archive **and its .arl/other numbered parts when present** into a private
+working directory first. Never extract into the installed game's `game/`
+folder; keep a separate `/tmp` or user-owned output path. Validate the
+extracted filenames before running the XML translation tools.

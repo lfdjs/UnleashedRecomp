@@ -219,6 +219,65 @@ def inventory(directory: Path, limit: int) -> None:
     print("INFO: names only; no game content read / apenas nomes; sem ler conteudo")
 
 
+
+def candidates(directory: Path, limit: int, max_files: int) -> None:
+    """EN: Rank likely dialogue/UI archives by filename without opening any.
+    PT-BR: Prioriza arquivos possiveis de dialogos pela nomenclatura, sem abri-los.
+    """
+    if not directory.is_dir():
+        raise TranslationError(f"Folder not found / Pasta nao encontrada: {directory}")
+    if limit <= 0 or max_files <= 0:
+        raise TranslationError("Limits must be positive / Limites devem ser positivos")
+    scored: list[tuple[int, str, dict]] = []
+    seen = 0
+    for archive in directory.rglob("*"):
+        if archive.is_symlink() or not archive.is_file():
+            continue
+        seen += 1
+        if seen > max_files:
+            raise TranslationError(
+                f"File scan limit reached ({max_files}); use a smaller folder"
+            )
+        lower = archive.name.lower()
+        if lower.endswith(".ar.00"):
+            stem = archive.name[:-6]
+        elif lower.endswith(".ar"):
+            stem = archive.name[:-3]
+        else:
+            continue
+        name = stem.lower()
+        if name.startswith("town_") and "_common" in name:
+            score, reason = 1, "town/common: NPC dialogue candidate"
+        elif name.startswith("town_"):
+            score, reason = 2, "town area: possible local text"
+        elif name.startswith("worldmap"):
+            score, reason = 3, "world map: possible menu text"
+        elif name.startswith("hint") or name.startswith("tutorial"):
+            score, reason = 4, "hints/tutorial: possible instructional text"
+        elif name.startswith("application") or name.startswith("title"):
+            score, reason = 5, "application/title: possible UI resources"
+        else:
+            continue
+        sidecar = archive.with_name(stem + ".arl")
+        record = {
+            "archive": archive.relative_to(directory).as_posix(),
+            "sidecar_arl": sidecar.relative_to(directory).as_posix()
+            if sidecar.is_file() else None,
+            "priority": score,
+            "reason": reason,
+        }
+        scored.append((score, record["archive"].lower(), record))
+    scored.sort(key=lambda item: (item[0], item[1]))
+    print(json.dumps({
+        "format": "unleashed-ptbr-archive-candidates-v1",
+        "candidate_archives": len(scored),
+        "shown": min(limit, len(scored)),
+        "archives": [entry for _, _, entry in scored[:limit]],
+    }, ensure_ascii=False, indent=2))
+    print("INFO: filename ranking only; archive contents NOT verified")
+    print("INFO: prioridade por nome; conteudo interno NAO verificado")
+
+
 def init_mod(output: Path) -> None:
     """EN: Create only an HMM-compatible metadata skeleton, not game assets.
     PT-BR: Gera apenas metadados HMM; nao inclui dados do Xbox 360.
@@ -252,6 +311,10 @@ def make_parser() -> argparse.ArgumentParser:
     scan = actions.add_parser("inventory", help="Scan installed resource extensions")
     scan.add_argument("--directory", type=Path, required=True)
     scan.add_argument("--max-files", type=int, default=100000)
+    pick = actions.add_parser("candidates", help="Rank likely text archives by name")
+    pick.add_argument("--directory", type=Path, required=True)
+    pick.add_argument("--limit", type=int, default=12)
+    pick.add_argument("--max-files", type=int, default=100000)
     export = actions.add_parser("export", help="Export an XTB-converter XML as translation JSON")
     export.add_argument("--xml", type=Path, required=True)
     export.add_argument("--out", type=Path, required=True)
@@ -277,6 +340,8 @@ def main() -> int:
             if args.max_files <= 0:
                 raise TranslationError("max-files must be positive")
             inventory(args.directory, args.max_files)
+        elif args.command == "candidates":
+            candidates(args.directory, args.limit, args.max_files)
         elif args.command == "export":
             export_template(args.xml, args.out)
         elif args.command == "audit":

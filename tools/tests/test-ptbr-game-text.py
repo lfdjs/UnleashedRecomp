@@ -112,6 +112,31 @@ class TestGameTextPipeline(unittest.TestCase):
                             '<XTBContainer><Categories /></XTBContainer>', encoding="utf-8")
         self.run_tool("export", "--xml", self.xml, "--out", self.template, expected=2)
 
+    def test_04_archive_candidates(self) -> None:
+        """EN: Rank town archives with .arl sidecars without unpacking assets.
+        PT-BR: Prioriza arquivos das cidades e identifica o .arl associado.
+        """
+        game = self.root / "game"
+        game.mkdir()
+        for name in (
+            "Town_EuropeanCity_Common.ar.00",
+            "Town_EuropeanCity_Common.arl",
+            "WorldMap.ar.00",
+            "Sonic.ar.00",
+            "Application.ar",
+        ):
+            (game / name).write_bytes(b"fixture")
+        result = self.run_tool("candidates", "--directory", game, "--limit", 2)
+        doc = json.loads(result.split("\nINFO:")[0])
+        self.assertEqual(doc["candidate_archives"], 3)
+        self.assertEqual(doc["shown"], 2)
+        self.assertEqual(doc["archives"][0]["archive"],
+                         "Town_EuropeanCity_Common.ar.00")
+        self.assertEqual(doc["archives"][0]["sidecar_arl"],
+                         "Town_EuropeanCity_Common.arl")
+        self.assertEqual(doc["archives"][1]["archive"], "WorldMap.ar.00")
+        self.run_tool("candidates", "--directory", game, "--limit", 0, expected=2)
+
     def test_04_inventory_and_mod_skeleton(self) -> None:
         """EN: Inspect file names only, and create no game assets in a mod.
         PT-BR: Inspeciona apenas nomes e nao inclui dados do jogo no mod.
