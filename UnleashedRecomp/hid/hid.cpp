@@ -79,6 +79,11 @@ std::string hid::GetInputDeviceName()
 
         case EInputDeviceExplicit::SwitchJCPair:
             return "Nintendo Switch Joy-Con (Pair)";
+
+        // EN: Distinguish handheld play from a detached Pro Controller.
+        // PT-BR: Identifica o modo portátil em vez de chamá-lo de Pro.
+        case EInputDeviceExplicit::SwitchHandheld:
+            return "Nintendo Switch (Handheld Joy-Cons)";
     }
 
     return "Unknown";

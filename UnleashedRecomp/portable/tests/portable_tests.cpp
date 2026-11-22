@@ -76,6 +76,31 @@ int main() {
     Check(portable::input::ClampAxis(-50000) == -32768, "negative axis");
     Check(portable::input::ClampAxis(50000) == 32767, "positive axis");
     Check(portable::input::DigitalTrigger(true) == 255, "digital trigger");
+    // EN: Verify Nintendo controller layouts and the full two-stick
+    //     requirement without a Switch SDK or physical controllers.
+    // PT-BR: Verifica Pro, Joy-Con pareados/separados e modo portátil
+    //     sem SDK do Switch e sem controles físicos.
+    using portable::input::NintendoLayout;
+    using portable::input::DetectNintendoLayout;
+    using portable::input::HasFullGamepad;
+    Check(DetectNintendoLayout(false, portable::input::SwitchFullKeyBit)
+        == NintendoLayout::ProController, "Switch Pro identified");
+    Check(DetectNintendoLayout(false, portable::input::SwitchJoyDualBit)
+        == NintendoLayout::JoyConPair, "paired Joy-Cons identified");
+    Check(DetectNintendoLayout(false, portable::input::SwitchJoyLeftBit)
+        == NintendoLayout::JoyConLeft, "left Joy-Con identified");
+    Check(DetectNintendoLayout(false, portable::input::SwitchJoyRightBit)
+        == NintendoLayout::JoyConRight, "right Joy-Con identified");
+    Check(DetectNintendoLayout(true, portable::input::SwitchFullKeyBit)
+        == NintendoLayout::Handheld, "handheld overrides docked style");
+    Check(DetectNintendoLayout(false, 0) == NintendoLayout::Unknown,
+        "disconnected Switch controller rejected");
+    Check(HasFullGamepad(NintendoLayout::Handheld), "handheld full gamepad");
+    Check(HasFullGamepad(NintendoLayout::JoyConPair), "Joy-Con pair full gamepad");
+    Check(HasFullGamepad(NintendoLayout::ProController), "Switch Pro full gamepad");
+    Check(!HasFullGamepad(NintendoLayout::JoyConLeft), "single left Joy-Con limited");
+    Check(!HasFullGamepad(NintendoLayout::JoyConRight), "single right Joy-Con limited");
+
     Check(portable::memory::AllocateDesktop(0).base == nullptr, "zero allocation rejected");
     const auto hostPage = portable::memory::HostPageSize();
     Check(hostPage >= 4096, "native page size available");

@@ -25,7 +25,10 @@ namespace hid
         NvShield,
         SwitchJCLeft,
         SwitchJCRight,
-        SwitchJCPair
+        SwitchJCPair,
+        // EN: Native Switch handheld (attached Joy-Cons); append to retain IDs.
+        // PT-BR: Joy-Cons acoplados no modo portátil; mantém os IDs anteriores.
+        SwitchHandheld
     };
 
     extern EInputDevice g_inputDevice;
