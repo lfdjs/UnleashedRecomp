@@ -14,6 +14,7 @@ on:
       - "UnleashedRecomp/user/paths.cpp"
       - "UnleashedRecomp/ui/installer_wizard.cpp"
       - "UnleashedRecomp/CMakeLists.txt"
+      - "thirdparty/CMakeLists.txt"
       - "tools/validate-portable-runtime.sh"
       - "tools/tests/**"
       - "cmake/ResolveVcpkgRoot.cmake"
@@ -108,6 +109,35 @@ jobs:
           grep -q 'PORTABLE_CHECK|guest-memory|FAIL' "${RUNNER_TEMP}/portable-sdl-preflight.log"
           grep -q 'PORTABLE_PREFLIGHT_END|exit_code=' "${RUNNER_TEMP}/portable-sdl-preflight.log"
           cat "${RUNNER_TEMP}/portable-sdl-preflight.log"
+
+  # EN: Build and initialize the exact pinned nativefiledialog portal
+  #     backend without game assets or an attached graphics device.
+  # PT-BR: Compila e inicia o backend portal exato do submodulo, sem
+  #     dados do jogo nem GPU fisica.
+  linux-file-dialog-portal:
+    name: Linux native file dialog (D-Bus portal)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Initialize pinned nativefiledialog
+        shell: bash
+        run: git submodule update --init thirdparty/nativefiledialog-extended
+      - name: Install D-Bus headers and tools
+        run: sudo apt-get update && sudo apt-get install -y libdbus-1-dev dbus-x11
+      - name: Configure pinned portal backend
+        run: cmake -S thirdparty/nativefiledialog-extended -B build/nfd-portal -DCMAKE_BUILD_TYPE=Debug -DNFD_PORTAL=ON -DNFD_BUILD_TESTS=OFF -DNFD_INSTALL=OFF
+      - name: Compile nativefiledialog portal
+        run: cmake --build build/nfd-portal --target nfd --parallel 2
+      - name: Verify NFD_Init over a temporary D-Bus session
+        shell: bash
+        run: |
+          # EN: Test portal initialization, not an interactive chooser.
+          # PT-BR: Testa a inicializacao, nao uma janela interativa.
+          c++ -std=c++20 -Ithirdparty/nativefiledialog-extended/src/include \
+            tools/tests/nfd_portal_smoke.cpp build/nfd-portal/src/libnfd.a \
+            $(pkg-config --libs dbus-1) -o build/nfd-portal/nfd_portal_smoke
+          dbus-run-session -- build/nfd-portal/nfd_portal_smoke
 
   # EN: Catch memory safety and undefined behavior regressions in the portable tests.
   # PT-BR: Detecta regressoes de memoria e comportamento indefinido nos testes.

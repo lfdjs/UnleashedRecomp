@@ -154,6 +154,13 @@ static std::list<std::filesystem::path> g_currentPickerResults;
 static std::atomic<bool> g_currentPickerResultsReady = false;
 static std::string g_currentPickerErrorMessage;
 static std::unique_ptr<std::thread> g_currentPickerThread;
+
+// EN: Track native-dialog initialization independently from the wizard UI.
+//     A failed D-Bus connection must never cause NFD_Quit on an invalid handle.
+// PT-BR: Acompanha a inicializacao do seletor separadamente da interface.
+//     Se o D-Bus falhar, NFD_Quit nao pode receber um handle invalido.
+static bool g_nativeDialogReady = false;
+static std::string g_nativeDialogInitError;
 static bool g_pickerTutorialCleared[2] = {};
 static bool g_pickerTutorialTriggered = false;
 static bool g_pickerTutorialFolderMode = false;
@@ -1269,6 +1276,18 @@ static void PickerStart(bool folderMode) {
     g_currentPickerResultsReady = false;
     g_currentPickerVisible = true;
 
+    // EN: Avoid calling file picker functions when NFD_Init failed; surface a
+    //     recoverable error through the existing wizard message-prompt UI.
+    // PT-BR: Evita chamar o seletor quando NFD_Init falhou; comunica o erro
+    //     pela interface existente sem encerrar o jogo.
+    if (!g_nativeDialogReady)
+    {
+        g_currentPickerErrorMessage =
+            "Native file dialog unavailable: " + g_nativeDialogInitError;
+        g_currentPickerResultsReady.store(true, std::memory_order_release);
+        return;
+    }
+
     // Optional single thread mode for testing on systems that do not interact well with the separate thread being used for NFD.
 #ifdef __APPLE__
     constexpr bool singleThreadMode = true;
@@ -1979,20 +1998,37 @@ bool InstallerWizard::Run(std::filesystem::path installPath, bool skipGame)
     EmbeddedPlayer::Init();
 
 #if defined(__linux__) && !defined(__ANDROID__)
-    // EN: The native-file-dialog Linux backend initializes GTK here.
-    //     Write a clear breadcrumb before and after NFD_Init so a fatal
-    //     GLib-GIO schema mismatch can be distinguished from a Vulkan crash.
-    // PT-BR: O seletor de arquivos nativo inicializa GTK neste ponto.
-    //     Registra marcadores antes e depois do NFD_Init para diferenciar
-    //     um erro fatal de esquema GLib-GIO de uma falha de renderizacao Vulkan.
-    LOGN("InstallerWizard: entering native file dialog (GTK) initialization.");
+#if defined(NFD_PORTAL)
+    // EN: The Linux portal backend uses D-Bus and avoids in-process GTK;
+    //     this prevents the previously traced gtk_init_check fatal abort.
+    // PT-BR: O backend portal usa D-Bus e evita GTK dentro do jogo,
+    //     eliminando a chamada gtk_init_check observada no backtrace.
+    LOGN("InstallerWizard: initializing native file dialog (xdg-desktop-portal).");
+#else
+    // EN: GTK is an explicit compatibility fallback, not the default.
+    // PT-BR: GTK e uma alternativa explicita de compatibilidade.
+    LOGN("InstallerWizard: initializing native file dialog (GTK fallback).");
 #endif
-    NFD_Init();
+#endif
+    // EN: Check the real NFD_Init result. A missing D-Bus session or desktop
+    //     portal should produce a visible picker error, never an invalid Quit.
+    // PT-BR: Verifica o resultado real. Sem D-Bus, apresenta erro de selecao
+    //     sem executar NFD_Quit em uma inicializacao malsucedida.
+    g_nativeDialogReady = (NFD_Init() == NFD_OKAY);
+    g_nativeDialogInitError.clear();
+    if (!g_nativeDialogReady)
+    {
+        const char* nfdError = NFD_GetError();
+        g_nativeDialogInitError =
+            nfdError && nfdError[0] != '\0' ? nfdError : "unknown NFD initialization error";
+        LOGFN_ERROR("Native file dialog initialization failed: {}", g_nativeDialogInitError);
+    }
+    else
+    {
 #if defined(__linux__) && !defined(__ANDROID__)
-    // EN: Only reaching this line proves that NFD_Init returned.
-    // PT-BR: Esta mensagem comprova apenas que NFD_Init retornou.
-    LOGN("InstallerWizard: native file dialog (GTK) initialization returned.");
+        LOGN("InstallerWizard: native file dialog initialization succeeded.");
 #endif
+    }
 
     // Guarantee one controller is initialized. We'll rely on SDL's event loop to get the controller events.
     XAMINPUT_STATE inputState;
@@ -2025,7 +2061,13 @@ bool InstallerWizard::Run(std::filesystem::path installPath, bool skipGame)
     }
 
     GameWindow::SetFullscreenCursorVisibility(false);
-    NFD_Quit();
+    // EN: Release only successfully initialized NFD state.
+    // PT-BR: Libera apenas um estado NFD inicializado com sucesso.
+    if (g_nativeDialogReady)
+    {
+        NFD_Quit();
+        g_nativeDialogReady = false;
+    }
 
     InstallerWizard::Shutdown();
     EmbeddedPlayer::Shutdown();

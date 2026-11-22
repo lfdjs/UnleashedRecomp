@@ -63,6 +63,29 @@ if (UNLEASHED_RECOMP_SWITCH)
         add_library(nfd::nfd ALIAS nfd_switch_stub)
     endif()
 else()
+    # EN: Use the desktop portal for Linux file/folder selection by default.
+    #     This keeps GTK/GSettings out of the game process; a newer GNOME
+    #     schema combined with a GTK library may otherwise abort at NFD_Init.
+    #     Set the backend to GTK explicitly if portal support is unavailable.
+    # PT-BR: Usa xdg-desktop-portal por padrao no Linux, sem inicializar GTK
+    #     diretamente dentro do jogo. GTK permanece uma opcao explicita para
+    #     distribuicoes sem suporte ao portal.
+    if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        set(UNLEASHED_RECOMP_LINUX_NFD_BACKEND "PORTAL" CACHE STRING
+            "Linux native file dialog backend: PORTAL (recommended) or GTK")
+        set_property(CACHE UNLEASHED_RECOMP_LINUX_NFD_BACKEND PROPERTY
+            STRINGS PORTAL GTK)
+        if(UNLEASHED_RECOMP_LINUX_NFD_BACKEND STREQUAL "PORTAL")
+            set(NFD_PORTAL ON CACHE BOOL "Use xdg-desktop-portal" FORCE)
+            message(STATUS "UnleashedRecomp native file dialog: xdg-desktop-portal (D-Bus)")
+        elseif(UNLEASHED_RECOMP_LINUX_NFD_BACKEND STREQUAL "GTK")
+            set(NFD_PORTAL OFF CACHE BOOL "Use xdg-desktop-portal" FORCE)
+            message(WARNING "GTK dialog backend selected; may be affected by GNOME GSettings schema mismatch")
+        else()
+            message(FATAL_ERROR
+                "Invalid UNLEASHED_RECOMP_LINUX_NFD_BACKEND='\${UNLEASHED_RECOMP_LINUX_NFD_BACKEND}'. Use PORTAL or GTK.")
+        endif()
+    endif()
     add_subdirectory("${UNLEASHED_RECOMP_THIRDPARTY_ROOT}/nativefiledialog-extended")
     add_subdirectory("${UNLEASHED_RECOMP_THIRDPARTY_ROOT}/SDL")
     add_subdirectory("${UNLEASHED_RECOMP_THIRDPARTY_ROOT}/SDL_mixer")

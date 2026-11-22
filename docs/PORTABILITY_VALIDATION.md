@@ -343,3 +343,61 @@ The missing schema key alone does not identify the caller: the backtrace is
 needed to distinguish GTK/NFD from other loaded libraries.
 A chave ausente nao identifica quem a consultou: o backtrace e necessario
 para diferenciar GTK/NFD de outras dependencias.
+
+
+## Linux native file dialog: GTK crash fix / Correcao do seletor de arquivos
+
+**EN (GDB confirmed, 2026-11-22):** The fatal `antialiasing` lookup
+occurred at `InstallerWizard::Run -> NFD_Init -> gtk_init_check ->
+gdk_display_manager_open_display -> g_settings_get_enum`, **before any
+gameplay**. The backtrace also included a `dconf` module loaded from a
+Snap-installed VS Code cache. This indicates an in-process GTK/GSettings
+failure; it does not establish a Vulkan rendering problem. A Snap environment
+interaction remains a hypothesis, not a confirmed sole cause.
+
+**PT-BR (confirmado pelo GDB):** A falha `antialiasing` aconteceu em
+`InstallerWizard::Run -> NFD_Init -> gtk_init_check -> g_settings_get_enum`,
+**antes do gameplay**. O backtrace tambem mostrou um modulo `dconf`
+no cache de um VS Code instalado via Snap. A falha e do GTK/GSettings
+dentro do processo, nao uma comprovacao de erro Vulkan. A influencia do
+ambiente Snap e possivel, mas ainda nao confirmada como causa unica.
+
+**EN:** Linux now selects the pinned `nativefiledialog-extended` **portal**
+backend by default. It uses the session D-Bus and an xdg-desktop-portal
+file chooser instead of initializing GTK inside the game. File and folder
+multi-selection APIs are preserved, and initialization errors are reported
+through the existing installer UI rather than using an invalid NFD handle.
+The pinned third-party submodule remains unchanged.
+
+**PT-BR:** No Linux, o padrao e o backend **xdg-desktop-portal**, por
+D-Bus, evitando a inicializacao do GTK dentro do jogo. A selecao multipla
+de arquivos/pastas permanece, com tratamento de erro na interface. O
+submodulo externo permanece intacto.
+
+~~~bash
+# Ubuntu / Debian / Mint - compile-time and desktop runtime dependencies
+sudo apt install libdbus-1-dev xdg-desktop-portal xdg-desktop-portal-gtk
+pkg-config --modversion dbus-1
+
+git switch portable
+git pull --ff-only
+cmake --preset linux-debug -DUNLEASHED_RECOMP_LINUX_NFD_BACKEND=PORTAL
+cmake --build out/build/linux-debug --target UnleashedRecomp --parallel 4
+bash tools/validate-linux-runtime.sh --game
+~~~
+
+**EN:** The portal requires a working per-user D-Bus session and a
+compatible `xdg-desktop-portal` backend. `NFD_Init` can succeed even if
+the actual FileChooser service is absent, so **open a folder and a multi-file
+picker** to validate the complete installer workflow. The old GTK backend
+remains available via `-DUNLEASHED_RECOMP_LINUX_NFD_BACKEND=GTK`;
+it may still trigger the original schema error on this machine.
+
+**PT-BR:** O portal necessita de sessao D-Bus de usuario e um backend
+`xdg-desktop-portal` compativel. O sucesso de `NFD_Init` nao garante a
+presenca do servico FileChooser; teste **selecionar pastas e varios arquivos**
+no instalador. O backend GTK continua disponivel com
+`-DUNLEASHED_RECOMP_LINUX_NFD_BACKEND=GTK`, mas pode apresentar novamente
+o erro GSettings nesta maquina.
+
+**EN/PT-BR:** Windows, macOS and Switch builds do not change backend.

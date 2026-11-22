@@ -71,34 +71,51 @@ if [[ "$host_tools" == true ]]; then
 fi
 
 
-# EN: Verify system GTK 3 development metadata before configuring the full
-#     Linux desktop game; the native file dialog backend requires gtk+-3.0.
-# PT-BR: Confere os metadados do GTK 3 de desenvolvimento antes do build
-#     Linux; o seletor nativo de arquivos depende de gtk+-3.0.
-check_linux_gtk3() {
+# EN: Validate the package required by the configured native file dialog.
+#     Linux uses xdg-desktop-portal (D-Bus) by default, not in-process GTK.
+# PT-BR: Verifica o pacote exigido pelo seletor nativo configurado.
+#     No Linux, usa portal (D-Bus) por padrao, sem GTK dentro do jogo.
+check_linux_dialog_backend() {
   if ! command -v pkg-config >/dev/null 2>&1; then
-    echo "BLOCKED: pkg-config is missing / pkg-config nao encontrado." >&2
-    echo "Install / Instale: pkgconf (Arch/Fedora) or pkg-config (Debian/Ubuntu)." >&2
+    echo "BLOCKED: pkg-config missing / instale pkg-config (pkgconf)." >&2
     return 2
   fi
 
-  # EN: Check the exact pkg-config module requested by nativefiledialog.
-  # PT-BR: Consulta o modulo exato usado pelo nativefiledialog.
-  if ! pkg-config --exists "gtk+-3.0"; then
-    echo "BLOCKED: GTK 3 development files not detected (gtk+-3.0)." >&2
-    echo "BLOQUEADO: arquivos de desenvolvimento GTK 3 nao encontrados." >&2
-    echo "  Ubuntu/Debian/Mint: sudo apt install libgtk-3-dev" >&2
-    echo "  Fedora:             sudo dnf install gtk3-devel" >&2
-    echo "  Arch/Manjaro:       sudo pacman -S gtk3" >&2
-    echo "  Check / Verifique:  pkg-config --modversion gtk+-3.0" >&2
-    echo "  If installed in a custom prefix, inspect PKG_CONFIG_PATH." >&2
-    echo "  Se instalado fora dos caminhos padrao, confira PKG_CONFIG_PATH." >&2
-    return 2
+  # EN: Respect the backend in CMakeCache.txt, including the GTK fallback.
+  # PT-BR: Respeita o backend salvo no CMakeCache, inclusive o fallback GTK.
+  local backend="PORTAL"
+  local cache="${root_dir}/out/build/linux-debug/CMakeCache.txt"
+  if [[ -f "$cache" ]]; then
+    local cached
+    cached="$(sed -n 's/^UNLEASHED_RECOMP_LINUX_NFD_BACKEND:STRING=//p' "$cache" | head -n 1)"
+    if [[ -n "$cached" ]]; then
+      backend="$cached"
+    fi
   fi
 
-  # EN: Print the package version for reproducible Linux build reports.
-  # PT-BR: Registra a versao para relatorios de compilacao reproduziveis.
-  echo "INFO: GTK 3 found / encontrado: $(pkg-config --modversion gtk+-3.0)"
+  if [[ "$backend" == "PORTAL" ]]; then
+    if ! pkg-config --exists dbus-1; then
+      echo "BLOCKED: D-Bus development dependency missing (dbus-1)." >&2
+      echo "Ubuntu/Debian/Mint: sudo apt install libdbus-1-dev xdg-desktop-portal xdg-desktop-portal-gtk" >&2
+      echo "Fedora: sudo dnf install dbus-devel xdg-desktop-portal xdg-desktop-portal-gtk" >&2
+      echo "Arch/Manjaro: sudo pacman -S dbus xdg-desktop-portal xdg-desktop-portal-gtk" >&2
+      echo "Check / Confira: pkg-config --modversion dbus-1" >&2
+      return 2
+    fi
+    echo "INFO: NFD portal (dbus-1) version: $(pkg-config --modversion dbus-1)"
+  elif [[ "$backend" == "GTK" ]]; then
+    if ! pkg-config --exists 'gtk+-3.0'; then
+      echo "BLOCKED: GTK fallback needs GTK 3 development files." >&2
+      echo "Ubuntu/Debian/Mint: sudo apt install libgtk-3-dev" >&2
+      echo "Fedora: sudo dnf install gtk3-devel" >&2
+      echo "Arch/Manjaro: sudo pacman -S gtk3" >&2
+      return 2
+    fi
+    echo "INFO: NFD GTK fallback version: $(pkg-config --modversion gtk+-3.0)"
+  else
+    echo "BLOCKED: invalid Linux NFD backend: $backend (use PORTAL or GTK)." >&2
+    return 2
+  fi
 }
 if [[ "$full_game" == true ]]; then
   # EN: Block misleading builds when licensed Xbox 360 inputs are absent.
@@ -121,7 +138,7 @@ if [[ "$full_game" == true ]]; then
   #     a long CMake pkg_check_modules stack trace.
   # PT-BR: Falha antecipadamente com instrucoes claras, antes de
   #     aparecer a pilha de erros do pkg_check_modules do CMake.
-  check_linux_gtk3
+  check_linux_dialog_backend
 
   # EN: CMakePresets.json already sets VCPKG_ROOT to thirdparty/vcpkg.
   #     The old shell precheck ran before CMake applied that preset and
