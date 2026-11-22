@@ -13,7 +13,11 @@ on:
       - "UnleashedRecomp/os/**"
       - "UnleashedRecomp/user/paths.cpp"
       - "UnleashedRecomp/ui/installer_wizard.cpp"
+      - "UnleashedRecomp/locale/**"
+      - "UnleashedRecomp/user/config.cpp"
       - "UnleashedRecomp/CMakeLists.txt"
+      - "UnleashedRecomp/locale/**"
+      - "UnleashedRecomp/user/config.cpp"
       - "thirdparty/CMakeLists.txt"
       - "tools/validate-portable-runtime.sh"
       - "tools/tests/**"
@@ -65,6 +69,9 @@ jobs:
           bash -n tools/tests/test-vcpkg-regeneration.sh
           bash tools/tests/test-vcpkg-regeneration.sh
           bash -n tools/validate-linux-runtime.sh
+      - name: Check pt-BR translation coverage / Conferir traducao pt-BR
+        if: runner.os == 'Linux'
+        run: python3 tools/tests/check-pt-br-localization.py
       - name: Configure / Configurar
         run: cmake -S UnleashedRecomp/portable/tests -B build/portable-tests -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
       - name: Build / Compilar
