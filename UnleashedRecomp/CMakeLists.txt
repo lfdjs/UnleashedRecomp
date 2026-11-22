@@ -286,6 +286,9 @@ set(UNLEASHED_RECOMP_PORTABLE_CXX_SOURCES
     "portable/memory.cpp"
     "portable/filesystem.cpp"
     "portable/process.cpp"
+    # EN: Asset-free host preflight; uses SDL2 already linked by the game.
+    # PT-BR: Diagnostico sem dados do jogo; reutiliza o SDL2 do executavel.
+    "portable/diagnostics.cpp"
 )
 set(UNLEASHED_RECOMP_CXX_SOURCES
     "app.cpp"

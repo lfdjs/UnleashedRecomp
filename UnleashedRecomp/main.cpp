@@ -8,6 +8,7 @@
 #include <kernel/memory.h>
 #include <portable/platform.h>
 #include <portable/memory.h>
+#include <portable/diagnostics.h>
 #include <kernel/heap.h>
 #include <kernel/xam.h>
 #include <kernel/io/file_system.h>
@@ -310,6 +311,17 @@ void init()
 
 int main(int argc, char *argv[])
 {
+    // EN: The explicit --portable-preflight path probes this native host without
+    //     opening the installer, downloading updates or loading game content.
+    // PT-BR: A opcao --portable-preflight verifica o host sem executar o
+    //     instalador, buscar atualizacoes ou carregar conteudo do jogo.
+    for (int i = 1; i < argc; ++i)
+    {
+        if (std::strcmp(argv[i], "--portable-preflight") == 0)
+            return portable::diagnostics::RunHostPreflight(
+                g_memory.base != nullptr, GetUserPath());
+    }
+
 #ifdef _WIN32
     timeBeginPeriod(1);
 #endif
