@@ -100,3 +100,58 @@ licenciado nem testes de gameplay no Switch.
 **EN:** The CI SDL model tests and Nintendo style unit tests require
 neither game data nor real controllers. Full-game rendering and input
 behavior remain separate manual acceptance tests.
+
+## Ícones adaptativos: DualSense e Xbox Series / Adaptive button prompts
+
+**PT-BR:** O `ButtonGuide` agora possui uma terceira camada visual
+procedural (ImGui), aplicada **somente quando a opção Ícones do controle
+está em Automático**. O novo desenho não modifica as texturas licenciadas
+presentes no submódulo `UnleashedRecompResources`.
+
+| Dispositivo detectado | Estilo automático dos botões A/B/X/Y |
+|---|---|
+| DualSense / PlayStation 5 | Cruz, círculo, quadrado e triângulo **brancos**, com fundo escuro |
+| DualShock 4 / DualShock 3 | Símbolos clássicos do atlas PlayStation |
+| Xbox One / Xbox Series | Letras A/B/X/Y **verde/vermelha/azul/amarela**, em fundo escuro |
+| Xbox 360 | Atlas Xbox original |
+| Nintendo Switch Pro / Joy-Con / portátil | Atlas Xbox original até haver ícones Nintendo |
+| Desconhecido | Atlas Xbox original |
+
+**EN:** The runtime draws modern face-button symbols directly with ImGui.
+Xbox Series controllers generally report as the SDL2 `XBOXONE` family;
+the application cannot distinguish older Xbox One pads reliably from Series
+controllers using that SDL type alone. Both use the new Series-like art.
+DualSense uses white cross/circle/square/triangle. These are original
+vector approximations rather than official vendor artwork.
+
+**PT-BR:** A configuração **Xbox** ou **PlayStation** escolhida manualmente
+continua usando o atlas original, sem novos desenhos. Botões L1/R1,
+LB/RB, L2/R2, gatilhos, Menu/Options/Create, teclado e mensagens de
+botões renderizadas **dentro do próprio jogo Xbox 360** não foram alterados.
+Essas mudanças abrangem os guias do instalador, opções e overlays que
+utilizam `ButtonGuide`, não todos os recursos do jogo.
+
+**EN:** Only the port-owned ButtonGuide ABXY symbols change. Existing
+shoulder/trigger/menu assets, game-engine tutorial artwork and manually
+forced icon sets are unchanged. The procedural symbols must be visually
+checked for alignment and scaling on a real GPU; asset-free CI tests only
+verify style selection.
+
+~~~bash
+git switch portable
+git pull --ff-only
+bash tools/build-linux-reuse-generated.sh
+bash tools/validate-linux-runtime.sh
+bash tools/validate-linux-runtime.sh --game
+~~~
+
+**PT-BR:** Conecte o DualSense e confira `icons=dualsense-white` no log de
+diagnóstico, se o SDL o detectar corretamente. Abra o instalador ou as opções
+e veja se os botões ✕/○/□/△ aparecem com traços brancos. Ao conectar Xbox
+Series/One, o diagnóstico deve indicar `icons=xbox-series-color` e o guia
+deve apresentar letras coloridas. Para comparar com a arte antiga,
+selecione manualmente PlayStation ou Xbox nas opções.
+
+**EN:** Test USB and Bluetooth separately. Confirm hotplug, prompts and
+styling on the installer/options screens. Full-game binary compilation
+is not performed by the asset-free CI workflow.

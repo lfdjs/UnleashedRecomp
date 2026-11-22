@@ -13,6 +13,8 @@ on:
       - "UnleashedRecomp/os/**"
       - "UnleashedRecomp/user/paths.cpp"
       - "UnleashedRecomp/ui/installer_wizard.cpp"
+      - "UnleashedRecomp/ui/button_guide.cpp"
+      - "UnleashedRecomp/ui/controller_icon_style.h"
       - "UnleashedRecomp/locale/**"
       - "UnleashedRecomp/user/config.cpp"
       - "UnleashedRecomp/CMakeLists.txt"
@@ -32,6 +34,8 @@ on:
       - ".github/workflows/portable-runtime.yml"
   pull_request:
     paths:
+      - "UnleashedRecomp/ui/button_guide.cpp"
+      - "UnleashedRecomp/ui/controller_icon_style.h"
       - "UnleashedRecomp/portable/**"
       - "UnleashedRecomp/kernel/**"
       - "UnleashedRecomp/cpu/**"

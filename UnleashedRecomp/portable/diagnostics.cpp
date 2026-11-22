@@ -3,6 +3,7 @@
 #include "memory.h"
 #include "platform.h"
 #include <hid/driver/sdl_controller_types.h>
+#include <ui/controller_icon_style.h>
 
 #include <SDL.h>
 #include <SDL_vulkan.h>
@@ -161,9 +162,28 @@ namespace portable::diagnostics
                 const auto type = mapped
                     ? SDL_GameControllerTypeForIndex(i)
                     : SDL_CONTROLLER_TYPE_UNKNOWN;
-                std::printf("PORTABLE_INFO|controller_%d|name=%s|mapped=%d|model=%s|type=%d\n",
+                // EN: The SDL family resolves to an automatic icon scheme.
+                //     This predicts the ButtonGuide style but is not proof
+                //     of successful on-screen rendering.
+                // PT-BR: Exibe o esquema esperado no modo Automático; a
+                //     renderização real precisa ser verificada no jogo.
+                const auto iconStyle = ui::controller_icons::AutomaticStyle(
+                    hid::sdl::Identify(type));
+                const char* iconStyleName = "xbox-classic";
+                switch (iconStyle)
+                {
+                case ui::controller_icons::Style::DualSense:
+                    iconStyleName = "dualsense-white"; break;
+                case ui::controller_icons::Style::XboxSeries:
+                    iconStyleName = "xbox-series-color"; break;
+                case ui::controller_icons::Style::PlayStationClassic:
+                    iconStyleName = "playstation-classic"; break;
+                default:
+                    break;
+                }
+                std::printf("PORTABLE_INFO|controller_%d|name=%s|mapped=%d|model=%s|type=%d|icons=%s\n",
                     i, SafeText(SDL_JoystickNameForIndex(i)), mapped ? 1 : 0,
-                    hid::sdl::ModelName(type), static_cast<int>(type));
+                    hid::sdl::ModelName(type), static_cast<int>(type), iconStyleName);
             }
         }
         else
