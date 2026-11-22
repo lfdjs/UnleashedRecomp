@@ -3,6 +3,7 @@
 #include <gpu/imgui/imgui_snapshot.h>
 #include <gpu/video.h>
 #include <hid/hid.h>
+#include <ui/controller_icon_style.h>
 #include <patches/aspect_ratio_patches.h>
 #include <user/config.h>
 #include <app.h>
@@ -143,6 +144,126 @@ std::tuple<std::tuple<ImVec2, ImVec2>, GuestTexture*> GetButtonIcon(EButtonIcon 
     return std::make_tuple(btn, texture);
 }
 
+/**
+ * EN: Draw authentic-looking modern face glyphs without modifying the
+ *     pinned DDS resource submodule. PlayStation 5 uses white line symbols
+ *     on dark discs; Xbox Series uses colored letters on dark discs.
+ *     These are original procedural approximations, not Sony/Microsoft
+ *     trademark artwork. Manual Xbox/PlayStation settings retain the atlas.
+ * PT-BR: Desenha simbolos modernos sem alterar o submodulo DDS original.
+ *     DualSense: simbolos brancos. Xbox Series: letras coloridas em circulos
+ *     escuros. Sao aproximacoes vetoriais, nao artes oficiais de marcas.
+ *     A selecao manual Xbox/PlayStation continua usando o atlas original.
+ */
+static bool DrawModernControllerFace(ImDrawList* drawList, EButtonIcon icon,
+    const ImVec2& iconMin, const ImVec2& iconMax)
+{
+    if (Config::ControllerIcons != EControllerIcons::Auto)
+        return false;
+
+    const auto style = ui::controller_icons::AutomaticStyle(hid::g_inputDeviceExplicit);
+    if (!ui::controller_icons::UsesModernFaceButtons(style))
+        return false;
+
+    if (icon != EButtonIcon::A && icon != EButtonIcon::B &&
+        icon != EButtonIcon::X && icon != EButtonIcon::Y)
+        return false;
+
+    const float width = iconMax.x - iconMin.x;
+    const float height = iconMax.y - iconMin.y;
+    const float radius = std::min(width, height) * 0.46f;
+    if (radius <= 0.0f)
+        return false;
+
+    const ImVec2 center{ (iconMin.x + iconMax.x) * 0.5f,
+        (iconMin.y + iconMax.y) * 0.5f };
+    const ImU32 background = IM_COL32(25, 27, 33, 255);
+    const ImU32 outline = IM_COL32(148, 153, 167, 200);
+    drawList->AddCircleFilled(center, radius, background, 40);
+    drawList->AddCircle(center, radius - 0.75f, outline, 40, std::max(1.0f, radius * 0.065f));
+
+    if (style == ui::controller_icons::Style::DualSense)
+    {
+        // EN: SDL's Xbox-layout A/B/X/Y correspond to Cross/Circle/Square/Triangle.
+        // PT-BR: A/B/X/Y do SDL equivalem a X/Circulo/Quadrado/Triangulo.
+        const ImU32 white = IM_COL32(246, 246, 250, 255);
+        const float size = radius * 0.49f;
+        const float thickness = std::max(2.0f, radius * 0.145f);
+
+        switch (icon)
+        {
+        case EButtonIcon::A:
+            drawList->AddLine({ center.x - size, center.y - size },
+                { center.x + size, center.y + size }, white, thickness);
+            drawList->AddLine({ center.x + size, center.y - size },
+                { center.x - size, center.y + size }, white, thickness);
+            break;
+        case EButtonIcon::B:
+            drawList->AddCircle(center, size, white, 36, thickness);
+            break;
+        case EButtonIcon::X:
+            drawList->AddRect({ center.x - size, center.y - size },
+                { center.x + size, center.y + size }, white, 0.0f, 0, thickness);
+            break;
+        case EButtonIcon::Y:
+            drawList->AddTriangle({ center.x, center.y - size * 1.17f },
+                { center.x - size * 1.12f, center.y + size * 0.86f },
+                { center.x + size * 1.12f, center.y + size * 0.86f },
+                white, thickness);
+            break;
+        default:
+            break;
+        }
+    }
+    else
+    {
+        // EN: Series face buttons have colored letters on dark button caps.
+        // PT-BR: As letras A/B/X/Y coloridas remetem aos botoes do Series.
+        const char* letter = nullptr;
+        ImU32 color = IM_COL32_WHITE;
+        switch (icon)
+        {
+        case EButtonIcon::A:
+            letter = "A"; color = IM_COL32(87, 206, 93, 255); break;
+        case EButtonIcon::B:
+            letter = "B"; color = IM_COL32(243, 92, 94, 255); break;
+        case EButtonIcon::X:
+            letter = "X"; color = IM_COL32(99, 162, 251, 255); break;
+        case EButtonIcon::Y:
+            letter = "Y"; color = IM_COL32(252, 206, 74, 255); break;
+        default:
+            break;
+        }
+        if (letter && g_fntNewRodin)
+        {
+            const float fontSize = radius * 1.30f;
+            const ImVec2 textSize = g_fntNewRodin->CalcTextSizeA(
+                fontSize, FLT_MAX, 0.0f, letter);
+            drawList->AddText(g_fntNewRodin, fontSize,
+                { center.x - textSize.x * 0.5f, center.y - textSize.y * 0.5f },
+                color, letter);
+        }
+    }
+    return true;
+}
+
+/**
+ * EN: Keep the existing image atlas for every other button or for
+ *     explicitly forced Xbox/PlayStation prompts.
+ * PT-BR: Preserva os icones existentes para os demais botoes e para
+ *     selecoes manuais de Xbox ou PlayStation.
+ */
+static void DrawControllerIcon(ImDrawList* drawList, EButtonIcon icon,
+    const ImVec2& iconMin, const ImVec2& iconMax)
+{
+    if (DrawModernControllerFace(drawList, icon, iconMin, iconMax))
+        return;
+
+    const auto buttonIcon = GetButtonIcon(icon);
+    drawList->AddImage(std::get<1>(buttonIcon), iconMin, iconMax,
+        GET_UV_COORDS(std::get<0>(buttonIcon)));
+}
+
 static void DrawGuide(float* offset, ImVec2 regionMin, ImVec2 regionMax, EButtonIcon icon,
     EButtonAlignment alignment, ImVec2 iconMin, ImVec2 iconMax, EFontQuality fontQuality,
     float textWidth, float maxTextWidth, float textScale, float fontSize, const char* text)
@@ -164,8 +285,8 @@ static void DrawGuide(float* offset, ImVec2 regionMin, ImVec2 regionMax, EButton
         iconMax.x = iconMin.x + iconWidth;
 
         // Left button.
-        auto btnIcon = GetButtonIcon(icon == EButtonIcon::LBRB ? EButtonIcon::LB : EButtonIcon::LT);
-        drawList->AddImage(std::get<1>(btnIcon), iconMin, iconMax, GET_UV_COORDS(std::get<0>(btnIcon)));
+        DrawControllerIcon(drawList, icon == EButtonIcon::LBRB ? EButtonIcon::LB : EButtonIcon::LT,
+            iconMin, iconMax);
 
         auto dualIconMin = alignment == EButtonAlignment::Left
             ? ImVec2(iconMax.x + maxTextWidth + iconMarginX, iconMin.y)
@@ -174,8 +295,8 @@ static void DrawGuide(float* offset, ImVec2 regionMin, ImVec2 regionMax, EButton
         auto dualIconMax = ImVec2(dualIconMin.x + iconWidth, iconMax.y);
 
         // Right button.
-        btnIcon = GetButtonIcon(icon == EButtonIcon::LBRB ? EButtonIcon::RB : EButtonIcon::RT);
-        drawList->AddImage(std::get<1>(btnIcon), dualIconMin, dualIconMax, GET_UV_COORDS(std::get<0>(btnIcon)));
+        DrawControllerIcon(drawList, icon == EButtonIcon::LBRB ? EButtonIcon::RB : EButtonIcon::RT,
+            dualIconMin, dualIconMax);
 
         textPos = { (iconMax.x + ((dualIconMin.x - iconMax.x) - maxTextWidth + std::max(0.0f, maxTextWidth - textWidth)) / 2) + Scale(2), textMarginY};
 
@@ -183,9 +304,7 @@ static void DrawGuide(float* offset, ImVec2 regionMin, ImVec2 regionMax, EButton
     }
     else
     {
-        auto btnIcon = GetButtonIcon(icon);
-
-        drawList->AddImage(std::get<1>(btnIcon), iconMin, iconMax, GET_UV_COORDS(std::get<0>(btnIcon)));
+        DrawControllerIcon(drawList, icon, iconMin, iconMax);
 
         auto textMarginX = alignment == EButtonAlignment::Left
             ? regionMin.x + *offset

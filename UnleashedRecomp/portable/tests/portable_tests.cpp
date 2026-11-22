@@ -18,6 +18,8 @@
 // EN: Test the real host-to-Xbox language mapping without game assets.
 // PT-BR: Testa a conversão de idioma sem precisar dos dados do jogo.
 #include "../../locale/locale.h"
+// EN/PT-BR: Pure controller-icon selection without image or GPU assets.
+#include "../../ui/controller_icon_style.h"
 #include <system_error>
 
 static int failures = 0;
@@ -44,6 +46,30 @@ int main() {
     Check(XboxGuestLanguage(ELanguage::Italian) == 6, "Xbox language Italian");
     Check(XboxGuestLanguage(ELanguage::PortugueseBrazil) == 1, "Xbox fallback for pt-BR");
     Check(XboxGuestLanguage(static_cast<ELanguage>(0)) == 1, "Xbox fallback for invalid language");
+    // EN: Modern icons follow detected models without changing the
+    //     original Xbox/PlayStation icon configuration or game assets.
+    // PT-BR: Icones modernos seguem o modelo detectado, sem alterar
+    //     recursos originais nem a selecao manual de icones.
+    using ui::controller_icons::Style;
+    using ui::controller_icons::AutomaticStyle;
+    using ui::controller_icons::UsesModernFaceButtons;
+    Check(AutomaticStyle(hid::EInputDeviceExplicit::DualSense) == Style::DualSense,
+        "DualSense uses white PlayStation symbols");
+    Check(AutomaticStyle(hid::EInputDeviceExplicit::DualShock4) == Style::PlayStationClassic,
+        "DualShock 4 keeps classic PlayStation icons");
+    Check(AutomaticStyle(hid::EInputDeviceExplicit::XboxOne) == Style::XboxSeries,
+        "Xbox Series and One family uses modern ABXY");
+    Check(AutomaticStyle(hid::EInputDeviceExplicit::Xbox360) == Style::XboxClassic,
+        "Xbox 360 keeps classic atlas");
+    Check(AutomaticStyle(hid::EInputDeviceExplicit::SwitchPro) == Style::XboxClassic,
+        "Nintendo Pro keeps Xbox fallback prompts");
+    Check(AutomaticStyle(hid::EInputDeviceExplicit::SwitchHandheld) == Style::XboxClassic,
+        "Switch handheld keeps Xbox fallback prompts");
+    Check(UsesModernFaceButtons(Style::DualSense), "DualSense face overlay active");
+    Check(UsesModernFaceButtons(Style::XboxSeries), "Xbox Series face overlay active");
+    Check(!UsesModernFaceButtons(Style::PlayStationClassic),
+        "Legacy PlayStation DDS remains unchanged");
+
     Check(portable::graphics::IsCompiled(portable::graphics::Backend::Vulkan), "Vulkan compiled");
     Check(!portable::graphics::IsCompiled(static_cast<portable::graphics::Backend>(255)),
         "unknown graphics backend rejected");
