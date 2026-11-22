@@ -81,6 +81,28 @@ jobs:
           clang++ -std=c++20 -Wall -Wextra -Werror -IUnleashedRecomp \
             $(pkg-config --cflags sdl2) -fsyntax-only \
             UnleashedRecomp/portable/diagnostics.cpp
+      - name: Link and exercise SDL preflight without game assets
+        shell: bash
+        env:
+          SDL_VIDEODRIVER: dummy
+          SDL_AUDIODRIVER: dummy
+        run: |
+          # EN: In headless CI, Vulkan may fail; check the stable report and bitmask.
+          # PT-BR: No CI sem tela, Vulkan pode falhar; valida o relatorio e os bits.
+          clang++ -std=c++20 -IUnleashedRecomp \
+            $(pkg-config --cflags sdl2) \
+            UnleashedRecomp/portable/diagnostics.cpp \
+            UnleashedRecomp/portable/memory.cpp \
+            UnleashedRecomp/portable/tests/sdl_preflight_smoke.cpp \
+            $(pkg-config --libs sdl2) \
+            -o "${RUNNER_TEMP}/portable-sdl-preflight"
+          "${RUNNER_TEMP}/portable-sdl-preflight" > "${RUNNER_TEMP}/portable-sdl-preflight.log"
+          grep -q 'PORTABLE_PREFLIGHT_BEGIN|version=1' "${RUNNER_TEMP}/portable-sdl-preflight.log"
+          grep -q 'PORTABLE_CHECK|guest-memory|PASS' "${RUNNER_TEMP}/portable-sdl-preflight.log"
+          grep -q 'PORTABLE_CHECK|guest-memory|FAIL' "${RUNNER_TEMP}/portable-sdl-preflight.log"
+          grep -q 'PORTABLE_PREFLIGHT_END|exit_code=' "${RUNNER_TEMP}/portable-sdl-preflight.log"
+          cat "${RUNNER_TEMP}/portable-sdl-preflight.log"
+
   # EN: Catch memory safety and undefined behavior regressions in the portable tests.
   # PT-BR: Detecta regressoes de memoria e comportamento indefinido nos testes.
   portable-sanitizers:
