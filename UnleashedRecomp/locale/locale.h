@@ -7,7 +7,10 @@ enum class ELanguage : uint32_t
     German,
     French,
     Spanish,
-    Italian
+    Italian,
+    // EN: Brazilian Portuguese is a new UI language; preserve legacy enum IDs.
+    // PT-BR: Novo idioma da interface, sem alterar os IDs dos anteriores.
+    PortugueseBrazil
 };
 
 inline std::string g_localeMissing = "<missing string>";

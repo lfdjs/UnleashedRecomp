@@ -15,7 +15,10 @@ CONFIG_DEFINE_ENUM_TEMPLATE(ELanguage)
     { "German",   ELanguage::German },
     { "French",   ELanguage::French },
     { "Spanish",  ELanguage::Spanish },
-    { "Italian",  ELanguage::Italian }
+    { "Italian",  ELanguage::Italian },
+    // EN: Persist the locale using a stable ASCII name in config.toml.
+    // PT-BR: Salva o idioma com nome ASCII estável em config.toml.
+    { "PortugueseBrazil", ELanguage::PortugueseBrazil }
 };
 
 CONFIG_DEFINE_ENUM_TEMPLATE(ETimeOfDayTransition)

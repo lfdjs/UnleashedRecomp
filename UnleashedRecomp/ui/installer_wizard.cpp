@@ -507,12 +507,14 @@ static const int WIZARD_INSTALL_TEXTURE_INDEX[] =
     5  // Force Eggman on InstallFailed.
 };
 
-// These are ordered from bottom to top in a 3x2 grid.
+// EN: Languages are ordered bottom-to-top: four on the left, three on the right.
+// PT-BR: Idiomas em ordem de baixo para cima: quatro à esquerda e três à direita.
 const char* LANGUAGE_TEXT[] =
 {
     "FRANÇAIS", // French
     "DEUTSCH", // German
     "ENGLISH", // English
+    "PORTUGUÊS (BR)", // Português (Brasil)
     "ESPAÑOL", // Spanish
     "ITALIANO", // Italian
     "日本語", // Japanese
@@ -523,6 +525,7 @@ const ELanguage LANGUAGE_ENUM[] =
     ELanguage::French,
     ELanguage::German,
     ELanguage::English,
+    ELanguage::PortugueseBrazil,
     ELanguage::Spanish,
     ELanguage::Italian,
     ELanguage::Japanese,
@@ -1389,11 +1392,18 @@ static void DrawLanguagePicker()
         float minX, maxX;
         bool buttonPressed;
 
-        for (int i = 0; i < 6; i++)
+        // EN: Use the actual language count and a 4+3 layout so adding
+        //     Brazilian Portuguese does not overlap or clip existing buttons.
+        // PT-BR: Usa a quantidade real de idiomas e grade 4+3, sem sobrepor
+        //     nem cortar os botões dos idiomas anteriores.
+        constexpr size_t leftColumnCount = 4;
+        for (size_t i = 0; i < std::size(LANGUAGE_ENUM); i++)
         {
-            ComputeButtonColumnCoordinates((i < 3) ? ButtonColumnLeft : ButtonColumnRight, minX, maxX);
+            const bool isLeft = i < leftColumnCount;
+            ComputeButtonColumnCoordinates(isLeft ? ButtonColumnLeft : ButtonColumnRight, minX, maxX);
 
-            float minusY = (CONTAINER_BUTTON_GAP + BUTTON_HEIGHT) * (float(i % 3));
+            const size_t row = isLeft ? i : i - leftColumnCount;
+            float minusY = (CONTAINER_BUTTON_GAP + BUTTON_HEIGHT) * float(row);
             ImVec2 min = { minX, g_aspectRatioOffsetY + Scale(CONTAINER_Y + CONTAINER_HEIGHT - CONTAINER_BUTTON_GAP - BUTTON_HEIGHT - minusY) };
             ImVec2 max = { maxX, g_aspectRatioOffsetY + Scale(CONTAINER_Y + CONTAINER_HEIGHT - CONTAINER_BUTTON_GAP - minusY) };
 
