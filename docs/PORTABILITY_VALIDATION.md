@@ -401,3 +401,8 @@ no instalador. O backend GTK continua disponivel com
 o erro GSettings nesta maquina.
 
 **EN/PT-BR:** Windows, macOS and Switch builds do not change backend.
+
+
+## Compatibilidade de controles / Gamepad support
+
+Consulte [Suporte a controles / Controller compatibility](CONTROLLER_COMPATIBILITY.md) para a detecção de DualShock 4, DualSense, Switch Pro, Joy-Con pareados e modo portátil. O diagnóstico Linux lista modelos reconhecidos; o teste de dispositivos reais ainda é necessário.

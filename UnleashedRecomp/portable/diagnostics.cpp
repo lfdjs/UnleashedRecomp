@@ -135,6 +135,17 @@ namespace portable::diagnostics
         //     fail solely because no physical gamepad is connected.
         // PT-BR: Controles sao opcionais; a ausencia de gamepad fisico nao
         //     reprova o diagnostico. Falhas do SDL ficam registradas.
+        // EN: Match game-runtime HIDAPI settings so the preflight discovers
+        //     Switch Pro and combined Joy-Cons just like gameplay does.
+        //     Enabling Sony HIDAPI also exposes DS4/DualSense models.
+        // PT-BR: Aplica as mesmas dicas HIDAPI do jogo para detectar
+        //     Switch Pro, Joy-Con pareados, DualShock 4 e DualSense.
+        SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_PS4, "1");
+        SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_PS5, "1");
+        SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_SWITCH, "1");
+        SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_JOY_CONS, "1");
+        SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_COMBINE_JOY_CONS, "1");
+
         const bool inputReady = SDL_InitSubSystem(SDL_INIT_GAMECONTROLLER) == 0;
         if (inputReady)
         {
