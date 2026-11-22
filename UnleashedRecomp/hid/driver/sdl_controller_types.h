@@ -1,6 +1,6 @@
 #pragma once
 #include <SDL.h>
-#include <hid/hid.h>
+#include <hid/controller_types.h>
 
 namespace hid::sdl
 {

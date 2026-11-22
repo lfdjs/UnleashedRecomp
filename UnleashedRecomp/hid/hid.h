@@ -1,36 +1,8 @@
 #pragma once
+#include <hid/controller_types.h>
 
 namespace hid
 {
-    enum class EInputDevice
-    {
-        Keyboard,
-        Mouse,
-        Xbox,
-        PlayStation
-    };
-
-    enum class EInputDeviceExplicit
-    {
-        Unknown,
-        Xbox360,
-        XboxOne,
-        DualShock3,
-        DualShock4,
-        SwitchPro,
-        Virtual,
-        DualSense,
-        Luna,
-        Stadia,
-        NvShield,
-        SwitchJCLeft,
-        SwitchJCRight,
-        SwitchJCPair,
-        // EN: Native Switch handheld (attached Joy-Cons); append to retain IDs.
-        // PT-BR: Joy-Cons acoplados no modo portátil; mantém os IDs anteriores.
-        SwitchHandheld
-    };
-
     extern EInputDevice g_inputDevice;
     extern EInputDevice g_inputDeviceController;
     extern EInputDeviceExplicit g_inputDeviceExplicit;

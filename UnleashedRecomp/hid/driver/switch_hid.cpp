@@ -32,11 +32,61 @@ namespace
             output |= target;
     }
 
+    // EN: Match libnx Npad bit positions to the platform-neutral model.
+    // PT-BR: Confere os bits do Npad com a classificação multiplataforma.
+    static_assert(HidNpadStyleTag_NpadFullKey == portable::input::SwitchFullKeyBit);
+    static_assert(HidNpadStyleTag_NpadHandheld == portable::input::SwitchHandheldBit);
+    static_assert(HidNpadStyleTag_NpadJoyDual == portable::input::SwitchJoyDualBit);
+    static_assert(HidNpadStyleTag_NpadJoyLeft == portable::input::SwitchJoyLeftBit);
+    static_assert(HidNpadStyleTag_NpadJoyRight == portable::input::SwitchJoyRightBit);
+
+    hid::EInputDeviceExplicit ToExplicitType(portable::input::NintendoLayout type)
+    {
+        switch (type)
+        {
+        case portable::input::NintendoLayout::ProController:
+            return hid::EInputDeviceExplicit::SwitchPro;
+        case portable::input::NintendoLayout::JoyConPair:
+            return hid::EInputDeviceExplicit::SwitchJCPair;
+        case portable::input::NintendoLayout::JoyConLeft:
+            return hid::EInputDeviceExplicit::SwitchJCLeft;
+        case portable::input::NintendoLayout::JoyConRight:
+            return hid::EInputDeviceExplicit::SwitchJCRight;
+        case portable::input::NintendoLayout::Handheld:
+            return hid::EInputDeviceExplicit::SwitchHandheld;
+        default:
+            return hid::EInputDeviceExplicit::Unknown;
+        }
+    }
+
     void SelectControllerDevice()
     {
+        // EN: padUpdate must run before checking connection and style.
+        //     Unlike the old implementation, handheld and Joy-Con pairs are
+        //     not incorrectly reported as a Pro Controller.
+        // PT-BR: Exige padUpdate antes da leitura do estilo. Modo portátil
+        //     e Joy-Cons pareados não são mais confundidos com Pro.
+        if (!padIsConnected(&g_pad))
+            return;
+
+        const auto layout = portable::input::DetectNintendoLayout(
+            padIsHandheld(&g_pad), padGetStyleSet(&g_pad));
+        const auto model = ToExplicitType(layout);
         hid::g_inputDevice = hid::EInputDevice::Xbox;
         hid::g_inputDeviceController = hid::EInputDevice::Xbox;
-        hid::g_inputDeviceExplicit = hid::EInputDeviceExplicit::SwitchPro;
+
+        // EN: The built-in prompt textures are Xbox/PlayStation only.
+        //     Nintendo layouts currently use Xbox prompts as a fallback.
+        // PT-BR: Os ícones existentes são Xbox/PlayStation; Nintendo usa
+        //     temporariamente o layout Xbox até termos ícones próprios.
+        if (hid::g_inputDeviceExplicit != model)
+        {
+            hid::g_inputDeviceExplicit = model;
+            LOGFN("Switch controller: {}{}",
+                hid::GetInputDeviceName(),
+                portable::input::HasFullGamepad(layout)
+                    ? "" : " [single Joy-Con: limited controls]");
+        }
     }
 
     bool SelectVibrationTarget(HidNpadIdType& id, HidNpadStyleTag& style, int& handleCount)
@@ -154,8 +204,10 @@ namespace
         g_gamepad.bLeftTrigger = (buttons & HidNpadButton_ZL) != 0 ? UINT8_MAX : 0;
         g_gamepad.bRightTrigger = (buttons & HidNpadButton_ZR) != 0 ? UINT8_MAX : 0;
 
-        if (buttons != 0 || left.x != 0 || left.y != 0 || right.x != 0 || right.y != 0)
-            SelectControllerDevice();
+        // EN: Detect mode changes even with no buttons pressed: switching
+        //     from handheld to Joy-Con pair/docked is not a key event.
+        // PT-BR: Detecta a troca portátil/dock/pareado sem exigir botões.
+        SelectControllerDevice();
     }
 
     void StopVibration()
@@ -176,11 +228,14 @@ namespace
 
 void hid::Init()
 {
+    // EN: Standard includes Pro, handheld, paired and individual Joy-Cons.
+    // PT-BR: Standard habilita Pro, portátil, Joy-Con dual e isolados.
     padConfigureInput(1, HidNpadStyleSet_NpadStandard);
     padInitializeDefault(&g_pad);
     hidPermitVibration(true);
+    padUpdate(&g_pad);
     SelectControllerDevice();
-    LOGN("Switch HID initialized");
+    LOGN("Switch HID initialized (Pro/Joy-Con dual/handheld supported)");
 }
 
 uint32_t hid::GetState(uint32_t dwUserIndex, XAMINPUT_STATE* pState)
