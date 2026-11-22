@@ -2,12 +2,40 @@
 
 #include <gpu/video.h>
 #include <xdbf_wrapper.h>
+#include <locale/locale.h>
 
 extern XDBFWrapper g_xdbfWrapper;
 extern std::unordered_map<uint16_t, GuestTexture*> g_xdbfTextureCache;
 
 namespace xdbf
 {
+    /**
+     * EN: Guest Xbox 360 XDBF achievement resources only provide the original
+     *     six languages. Brazilian Portuguese localizes the port UI but has
+     *     no XDBF translation, so use English guest assets for that locale.
+     *     Unknown/corrupted config language values also fall back safely.
+     * PT-BR: As conquistas XDBF do Xbox 360 possuem apenas os seis idiomas
+     *     originais. Português (Brasil) traduz a interface do port, não os
+     *     recursos XDBF; por isso usamos inglês nesses dados do jogo.
+     *     Idiomas inválidos na configuração também retornam ao inglês.
+     */
+    inline EXDBFLanguage GetAssetLanguage(ELanguage language) noexcept
+    {
+        switch (language)
+        {
+        case ELanguage::English:
+        case ELanguage::Japanese:
+        case ELanguage::German:
+        case ELanguage::French:
+        case ELanguage::Spanish:
+        case ELanguage::Italian:
+            return static_cast<EXDBFLanguage>(language);
+        case ELanguage::PortugueseBrazil:
+        default:
+            return XDBF_LANGUAGE_ENGLISH;
+        }
+    }
+
     inline std::string& FixInvalidSequences(std::string& str)
     {
         static std::array<std::string_view, 1> invalidSequences =

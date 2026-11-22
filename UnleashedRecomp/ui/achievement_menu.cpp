@@ -750,9 +750,14 @@ void AchievementMenu::Open()
 
     g_achievements.clear();
 
-    for (auto& achievement : g_xdbfWrapper.GetAchievements((EXDBFLanguage)Config::Language.Value))
+    // EN: Use an existing XDBF asset language; pt-BR localizes the UI only.
+    // PT-BR: Consulta um idioma existente no XDBF; a interface segue em pt-BR.
+    const auto assetLanguage = xdbf::GetAssetLanguage(Config::Language);
+    for (auto& achievement : g_xdbfWrapper.GetAchievements(assetLanguage))
     {
-        if (Config::Language == ELanguage::English)
+        // EN: English-fallback achievement names need the same normalization.
+        // PT-BR: Nomes de conquistas no fallback inglês recebem a mesma correção.
+        if (assetLanguage == XDBF_LANGUAGE_ENGLISH)
             achievement.Name = xdbf::FixInvalidSequences(achievement.Name);
 
         g_achievements.push_back(std::make_tuple(achievement, AchievementManager::GetTimestamp(achievement.ID)));

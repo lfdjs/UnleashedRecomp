@@ -59,3 +59,16 @@ and the installer language selector.
 
 **EN/PT-BR:** Functional code comments are bilingual; original game assets
 and third-party submodules have not been modified.
+
+## Conquistas do Xbox 360 / Xbox 360 achievement fallback
+
+**PT-BR:** A base XDBF original contém os seis idiomas oferecidos pelo jogo.
+Como não existe uma tradução original dos recursos de conquistas para
+Português (Brasil), nomes e descrições de conquistas continuam sendo
+obtidos em inglês quando o novo idioma de interface está selecionado.
+Isso evita utilizar um identificador de idioma que não existe no XDBF.
+O título da interface, botões e mensagens do port permanecem em pt-BR.
+
+**EN:** The original XDBF files contain only six supported asset languages.
+With the pt-BR interface selected, achievement names and descriptions use
+English XDBF content as a safe fallback. Port UI labels remain Portuguese.

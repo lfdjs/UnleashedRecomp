@@ -150,6 +150,20 @@ def validate_selection() -> None:
     assert LANG in choices
     assert "std::size(LANGUAGE_ENUM)" in wizard
     assert "leftColumnCount = 4" in wizard
+    
+    # EN: In-game Xbox XDBF assets have six language IDs, not seven.
+    # PT-BR: Recursos XDBF do Xbox possuem seis idiomas, nao sete.
+    asset_source = read("UnleashedRecomp/kernel/xdbf.h")
+    assert "GetAssetLanguage(ELanguage language)" in asset_source
+    assert "case ELanguage::PortugueseBrazil:" in asset_source
+    assert "return XDBF_LANGUAGE_ENGLISH;" in asset_source
+    for relative in [
+        "UnleashedRecomp/ui/achievement_menu.cpp",
+        "UnleashedRecomp/ui/achievement_overlay.cpp",
+    ]:
+        achievement_source = read(relative)
+        assert "xdbf::GetAssetLanguage(Config::Language)" in achievement_source
+        assert "(EXDBFLanguage)Config::Language.Value" not in achievement_source
 
 
 def main() -> int:

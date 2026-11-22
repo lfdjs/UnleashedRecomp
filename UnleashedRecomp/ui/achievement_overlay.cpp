@@ -121,10 +121,15 @@ void AchievementOverlay::Draw()
         s_isVisible = true;
         g_isClosing = false;
         g_appearTime = ImGui::GetTime();
-        g_achievement = g_xdbfWrapper.GetAchievement((EXDBFLanguage)Config::Language.Value, s_queue.front());
+        // EN: Map the Brazilian Portuguese UI to an existing English XDBF
+        //     achievement resource without changing the visible UI language.
+        // PT-BR: Usa os recursos XDBF em inglês quando a interface está
+        //     em português, sem alterar o idioma escolhido pelo usuário.
+        const auto assetLanguage = xdbf::GetAssetLanguage(Config::Language);
+        g_achievement = g_xdbfWrapper.GetAchievement(assetLanguage, s_queue.front());
         s_queue.pop();
         
-        if (Config::Language == ELanguage::English)
+        if (assetLanguage == XDBF_LANGUAGE_ENGLISH)
             g_achievement.Name = xdbf::FixInvalidSequences(g_achievement.Name);
         
         Game_PlaySound("obj_navi_appear");
