@@ -12,6 +12,7 @@ on:
       - "UnleashedRecomp/hid/**"
       - "UnleashedRecomp/os/**"
       - "UnleashedRecomp/user/paths.cpp"
+      - "UnleashedRecomp/ui/installer_wizard.cpp"
       - "UnleashedRecomp/CMakeLists.txt"
       - "tools/validate-portable-runtime.sh"
       - "tools/tests/**"

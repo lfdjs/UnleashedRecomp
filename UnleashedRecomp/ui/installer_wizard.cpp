@@ -16,6 +16,7 @@
 #include <decompressor.h>
 #include <exports.h>
 #include <sdl_listener.h>
+#include <os/logger.h>
 
 #include <res/images/common/hedge-dev.dds.h>
 #include <res/images/installer/install_001.dds.h>
@@ -1976,7 +1977,22 @@ bool InstallerWizard::Run(std::filesystem::path installPath, bool skipGame)
     g_installPath = installPath;
 
     EmbeddedPlayer::Init();
+
+#if defined(__linux__) && !defined(__ANDROID__)
+    // EN: The native-file-dialog Linux backend initializes GTK here.
+    //     Write a clear breadcrumb before and after NFD_Init so a fatal
+    //     GLib-GIO schema mismatch can be distinguished from a Vulkan crash.
+    // PT-BR: O seletor de arquivos nativo inicializa GTK neste ponto.
+    //     Registra marcadores antes e depois do NFD_Init para diferenciar
+    //     um erro fatal de esquema GLib-GIO de uma falha de renderizacao Vulkan.
+    LOGN("InstallerWizard: entering native file dialog (GTK) initialization.");
+#endif
     NFD_Init();
+#if defined(__linux__) && !defined(__ANDROID__)
+    // EN: Only reaching this line proves that NFD_Init returned.
+    // PT-BR: Esta mensagem comprova apenas que NFD_Init retornou.
+    LOGN("InstallerWizard: native file dialog (GTK) initialization returned.");
+#endif
 
     // Guarantee one controller is initialized. We'll rely on SDL's event loop to get the controller events.
     XAMINPUT_STATE inputState;
