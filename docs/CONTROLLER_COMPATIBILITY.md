@@ -125,17 +125,23 @@ DualSense uses white cross/circle/square/triangle. These are original
 vector approximations rather than official vendor artwork.
 
 **PT-BR:** A configuração **Xbox** ou **PlayStation** escolhida manualmente
-continua usando o atlas original, sem novos desenhos. Botões L1/R1,
-LB/RB, L2/R2, gatilhos, Menu/Options/Create, teclado e mensagens de
-botões renderizadas **dentro do próprio jogo Xbox 360** não foram alterados.
+continua usando o atlas original, sem novos desenhos. Em modo **Automático**,
+Xbox One/Series agora também desenha **LB/RB** como botões alongados, com
+borda discreta e letras brancas **em negrito**. As letras A/B/X/Y ficaram
+maiores e mais espessas, com a letra X azul destacada da cruz PlayStation.
+L1/R1 no DualSense, L2/R2, gatilhos, Menu/Options/Create, teclado e
+mensagens de botões renderizadas **dentro do próprio jogo Xbox 360**
+não foram alterados.
 Essas mudanças abrangem os guias do instalador, opções e overlays que
 utilizam `ButtonGuide`, não todos os recursos do jogo.
 
-**EN:** Only the port-owned ButtonGuide ABXY symbols change. Existing
-shoulder/trigger/menu assets, game-engine tutorial artwork and manually
-forced icon sets are unchanged. The procedural symbols must be visually
-checked for alignment and scaling on a real GPU; asset-free CI tests only
-verify style selection.
+**EN:** The port-owned ButtonGuide now draws bold, oversized colored
+Xbox One/Series ABXY letters and new dark, rounded white-lettered LB/RB
+bumper caps. DualSense keeps its existing white geometric face symbols
+and its original L1/R1 atlas. Trigger/menu art, in-engine tutorial artwork
+and manually forced icon sets are unchanged. The procedural symbols must
+be checked for alignment and scaling on real hardware; asset-free CI
+tests only verify style selection.
 
 ~~~bash
 git switch portable

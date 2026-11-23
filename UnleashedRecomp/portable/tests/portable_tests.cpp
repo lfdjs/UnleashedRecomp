@@ -69,6 +69,19 @@ int main() {
     Check(UsesModernFaceButtons(Style::XboxSeries), "Xbox Series face overlay active");
     Check(!UsesModernFaceButtons(Style::PlayStationClassic),
         "Legacy PlayStation DDS remains unchanged");
+    // EN: Xbox One/Series gets modern LB/RB while DualSense retains
+    //     its own original L1/R1 atlas. Manual forced icons are separate.
+    // PT-BR: Xbox One/Series moderniza LB/RB; DualSense preserva L1/R1.
+    using ui::controller_icons::UsesModernShoulderButtons;
+    Check(UsesModernShoulderButtons(Style::XboxSeries),
+        "Xbox One/Series modern LB and RB");
+    Check(!UsesModernShoulderButtons(Style::DualSense),
+        "DualSense L1/R1 atlas preserved");
+    Check(!UsesModernShoulderButtons(Style::XboxClassic),
+        "Xbox 360 bumpers preserved");
+    Check(!UsesModernShoulderButtons(Style::PlayStationClassic),
+        "DualShock 4 shoulders preserved");
+
 
     Check(portable::graphics::IsCompiled(portable::graphics::Backend::Vulkan), "Vulkan compiled");
     Check(!portable::graphics::IsCompiled(static_cast<portable::graphics::Backend>(255)),

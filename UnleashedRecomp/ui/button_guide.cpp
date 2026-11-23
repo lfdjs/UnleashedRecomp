@@ -145,28 +145,118 @@ std::tuple<std::tuple<ImVec2, ImVec2>, GuestTexture*> GetButtonIcon(EButtonIcon 
 }
 
 /**
- * EN: Draw authentic-looking modern face glyphs without modifying the
- *     pinned DDS resource submodule. PlayStation 5 uses white line symbols
- *     on dark discs; Xbox Series uses colored letters on dark discs.
- *     These are original procedural approximations, not Sony/Microsoft
- *     trademark artwork. Manual Xbox/PlayStation settings retain the atlas.
- * PT-BR: Desenha simbolos modernos sem alterar o submodulo DDS original.
- *     DualSense: simbolos brancos. Xbox Series: letras coloridas em circulos
- *     escuros. Sao aproximacoes vetoriais, nao artes oficiais de marcas.
- *     A selecao manual Xbox/PlayStation continua usando o atlas original.
+ * EN: Approximate the raised, bold lettering on Xbox One/Series controller
+ *     keycaps. The shipped New Rodin font remains in use, but tiny offset
+ *     passes thicken its strokes so X is visibly a *letter*, unlike the
+ *     thin white PlayStation cross. No font files or DDS assets are added.
+ * PT-BR: Aproxima a tipografia em negrito dos botoes Xbox One/Series.
+ *     Pequenos deslocamentos engrossam as letras da fonte existente,
+ *     diferenciando o X azul da cruz branca do PlayStation.
  */
-static bool DrawModernControllerFace(ImDrawList* drawList, EButtonIcon icon,
+static void DrawBoldXboxLabel(ImDrawList* drawList, const char* label,
+    const ImVec2& center, float fontSize, ImU32 color)
+{
+    if (!g_fntNewRodin || !label)
+        return;
+
+    const ImVec2 textSize = g_fntNewRodin->CalcTextSizeA(fontSize, FLT_MAX, 0.0f, label);
+    const ImVec2 origin{
+        center.x - textSize.x * 0.5f,
+        center.y - textSize.y * 0.5f
+    };
+
+    // EN: Font-weight approximation scales with the button artwork, while
+    //     the dark shadow gives the colored glyph some visual depth.
+    // PT-BR: O negrito cresce com o botao e a sombra realca a letra colorida.
+    const float weight = std::max(0.85f, fontSize * 0.052f);
+    drawList->AddText(g_fntNewRodin, fontSize,
+        { origin.x + weight * 0.65f, origin.y + weight * 0.95f },
+        IM_COL32(4, 5, 7, 200), label);
+
+    drawList->AddText(g_fntNewRodin, fontSize,
+        { origin.x - weight, origin.y }, color, label);
+    drawList->AddText(g_fntNewRodin, fontSize,
+        { origin.x + weight, origin.y }, color, label);
+    drawList->AddText(g_fntNewRodin, fontSize,
+        { origin.x, origin.y - weight }, color, label);
+    drawList->AddText(g_fntNewRodin, fontSize,
+        { origin.x, origin.y + weight }, color, label);
+    drawList->AddText(g_fntNewRodin, fontSize, origin, color, label);
+}
+
+/**
+ * EN: Use a rounded, low-profile bumper shape with white bold LB/RB
+ *     lettering, closer to Xbox One/Series shoulder buttons than the
+ *     classic Xbox 360 DDS strip. The 70x40 guide slot remains unchanged.
+ * PT-BR: Desenha uma tecla alongada e arredondada com LB/RB brancos e
+ *     fortes, mantendo o tamanho 70x40 do guia anterior.
+ */
+static void DrawXboxSeriesShoulder(ImDrawList* drawList, EButtonIcon icon,
+    const ImVec2& iconMin, const ImVec2& iconMax)
+{
+    const float width = iconMax.x - iconMin.x;
+    const float height = iconMax.y - iconMin.y;
+    const float paddingX = width * 0.035f;
+    const float paddingY = height * 0.12f;
+    const ImVec2 min{ iconMin.x + paddingX, iconMin.y + paddingY };
+    const ImVec2 max{ iconMax.x - paddingX, iconMax.y - paddingY };
+    const float round = std::min(height * 0.30f, width * 0.16f);
+    const ImVec2 center{ (min.x + max.x) * 0.5f, (min.y + max.y) * 0.5f };
+
+    // EN: Raised charcoal cap with a subtle rim and reflection.
+    // PT-BR: Tecla de grafite com borda suave e reflexo discreto.
+    drawList->AddRectFilled({ min.x, min.y + height * 0.055f },
+        { max.x, max.y + height * 0.055f },
+        IM_COL32(5, 6, 8, 240), round);
+    drawList->AddRectFilled(min, max, IM_COL32(29, 32, 39, 255), round);
+    drawList->AddRect(min, max, IM_COL32(144, 149, 160, 225),
+        round, 0, std::max(1.0f, height * 0.035f));
+    drawList->AddLine(
+        { min.x + round, min.y + height * 0.055f },
+        { max.x - round, min.y + height * 0.055f },
+        IM_COL32(176, 184, 197, 125), std::max(1.0f, height * 0.03f));
+
+    // EN: Shoulder labels are neutral white, not ABXY face-button colors.
+    // PT-BR: LB/RB usam branco, diferente das letras coloridas A/B/X/Y.
+    DrawBoldXboxLabel(drawList, icon == EButtonIcon::LB ? "LB" : "RB",
+        center, height * 0.57f, IM_COL32(245, 246, 250, 255));
+}
+
+/**
+ * EN: Automatically render modern controller prompts for the port-owned UI.
+ *     DualSense keeps its white geometric face symbols. Xbox One/Series use
+ *     dark physical-style caps with large bold colored A/B/X/Y lettering
+ *     and new LB/RB bumpers. The classic DDS atlas is not modified.
+ * PT-BR: O DualSense mantem simbolos brancos; Xbox One/Series recebem
+ *     letras A/B/X/Y maiores e em negrito, alem de LB/RB modernos.
+ *     Os arquivos originais do atlas DDS permanecem intactos.
+ */
+static bool DrawModernControllerButton(ImDrawList* drawList, EButtonIcon icon,
     const ImVec2& iconMin, const ImVec2& iconMax)
 {
     if (Config::ControllerIcons != EControllerIcons::Auto)
         return false;
 
-    const auto style = ui::controller_icons::AutomaticStyle(hid::g_inputDeviceExplicit);
-    if (!ui::controller_icons::UsesModernFaceButtons(style))
+    const auto visual = ui::controller_icons::AutomaticStyle(hid::g_inputDeviceExplicit);
+
+    const bool shoulder = icon == EButtonIcon::LB || icon == EButtonIcon::RB;
+    if (shoulder && ui::controller_icons::UsesModernShoulderButtons(visual))
+    {
+        if (!g_fntNewRodin)
+            return false;
+        DrawXboxSeriesShoulder(drawList, icon, iconMin, iconMax);
+        return true;
+    }
+
+    const bool face = icon == EButtonIcon::A || icon == EButtonIcon::B ||
+        icon == EButtonIcon::X || icon == EButtonIcon::Y;
+    if (!face || !ui::controller_icons::UsesModernFaceButtons(visual))
         return false;
 
-    if (icon != EButtonIcon::A && icon != EButtonIcon::B &&
-        icon != EButtonIcon::X && icon != EButtonIcon::Y)
+    // EN: If the font is unavailable, retain the original Xbox atlas
+    //     instead of displaying unlabeled black circles.
+    // PT-BR: Sem fonte, retorna ao DDS original em vez de botoes sem letras.
+    if (visual == ui::controller_icons::Style::XboxSeries && !g_fntNewRodin)
         return false;
 
     const float width = iconMax.x - iconMin.x;
@@ -179,17 +269,20 @@ static bool DrawModernControllerFace(ImDrawList* drawList, EButtonIcon icon,
         (iconMin.y + iconMax.y) * 0.5f };
     const ImU32 background = IM_COL32(25, 27, 33, 255);
     const ImU32 outline = IM_COL32(148, 153, 167, 200);
+    drawList->AddCircleFilled(
+        { center.x, center.y + radius * 0.11f }, radius,
+        IM_COL32(5, 6, 8, 235), 40);
     drawList->AddCircleFilled(center, radius, background, 40);
-    drawList->AddCircle(center, radius - 0.75f, outline, 40, std::max(1.0f, radius * 0.065f));
+    drawList->AddCircle(center, radius - 0.75f, outline, 40,
+        std::max(1.0f, radius * 0.065f));
 
-    if (style == ui::controller_icons::Style::DualSense)
+    if (visual == ui::controller_icons::Style::DualSense)
     {
-        // EN: SDL's Xbox-layout A/B/X/Y correspond to Cross/Circle/Square/Triangle.
-        // PT-BR: A/B/X/Y do SDL equivalem a X/Circulo/Quadrado/Triangulo.
+        // EN: SDL's A/B/X/Y correspond to Cross/Circle/Square/Triangle.
+        // PT-BR: A/B/X/Y do SDL equivalem a Cruz/Circulo/Quadrado/Triangulo.
         const ImU32 white = IM_COL32(246, 246, 250, 255);
         const float size = radius * 0.49f;
         const float thickness = std::max(2.0f, radius * 0.145f);
-
         switch (icon)
         {
         case EButtonIcon::A:
@@ -217,32 +310,27 @@ static bool DrawModernControllerFace(ImDrawList* drawList, EButtonIcon icon,
     }
     else
     {
-        // EN: Series face buttons have colored letters on dark button caps.
-        // PT-BR: As letras A/B/X/Y coloridas remetem aos botoes do Series.
-        const char* letter = nullptr;
+        // EN: Large *typographic* Xbox letters; the blue bold 'X' is no
+        //     longer a pair of thin white lines like a PlayStation cross.
+        // PT-BR: O X azul agora e uma letra grande e em negrito, nao duas
+        //     linhas brancas finas como a cruz do PlayStation.
+        const char* label = nullptr;
         ImU32 color = IM_COL32_WHITE;
         switch (icon)
         {
         case EButtonIcon::A:
-            letter = "A"; color = IM_COL32(87, 206, 93, 255); break;
+            label = "A"; color = IM_COL32(91, 214, 98, 255); break;
         case EButtonIcon::B:
-            letter = "B"; color = IM_COL32(243, 92, 94, 255); break;
+            label = "B"; color = IM_COL32(246, 99, 105, 255); break;
         case EButtonIcon::X:
-            letter = "X"; color = IM_COL32(99, 162, 251, 255); break;
+            label = "X"; color = IM_COL32(99, 166, 253, 255); break;
         case EButtonIcon::Y:
-            letter = "Y"; color = IM_COL32(252, 206, 74, 255); break;
+            label = "Y"; color = IM_COL32(255, 210, 78, 255); break;
         default:
             break;
         }
-        if (letter && g_fntNewRodin)
-        {
-            const float fontSize = radius * 1.30f;
-            const ImVec2 textSize = g_fntNewRodin->CalcTextSizeA(
-                fontSize, FLT_MAX, 0.0f, letter);
-            drawList->AddText(g_fntNewRodin, fontSize,
-                { center.x - textSize.x * 0.5f, center.y - textSize.y * 0.5f },
-                color, letter);
-        }
+        if (label)
+            DrawBoldXboxLabel(drawList, label, center, radius * 1.48f, color);
     }
     return true;
 }
@@ -256,7 +344,7 @@ static bool DrawModernControllerFace(ImDrawList* drawList, EButtonIcon icon,
 static void DrawControllerIcon(ImDrawList* drawList, EButtonIcon icon,
     const ImVec2& iconMin, const ImVec2& iconMax)
 {
-    if (DrawModernControllerFace(drawList, icon, iconMin, iconMax))
+    if (DrawModernControllerButton(drawList, icon, iconMin, iconMax))
         return;
 
     const auto buttonIcon = GetButtonIcon(icon);

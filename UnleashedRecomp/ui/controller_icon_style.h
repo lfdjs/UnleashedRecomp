@@ -46,14 +46,23 @@ namespace ui::controller_icons
     }
 
     /**
-     * EN: The procedural overlay only replaces ABXY face buttons.
-     *     All shoulder, trigger, menu and keyboard artwork remains in the
-     *     original atlas until a complete licensed replacement is available.
-     * PT-BR: O desenho vetorial substitui apenas A/B/X/Y. Ombros, gatilhos,
-     *     menu e teclado continuam usando o atlas original.
+     * EN: Modern overlays replace ABXY on DualSense/Xbox One-Series. Only
+     *     Xbox One-Series additionally replaces LB/RB shoulders; triggers,
+     *     menu buttons and forced icon styles still use the original atlas.
+     * PT-BR: DualSense e Xbox One-Series modernizam A/B/X/Y. Somente Xbox
+     *     One-Series moderniza tambem LB/RB; gatilhos e menu usam DDS.
      */
     constexpr bool UsesModernFaceButtons(Style style) noexcept
     {
         return style == Style::XboxSeries || style == Style::DualSense;
+    }
+
+    /**
+     * EN: The shoulder bumpers are redrawn only for Xbox One/Series.
+     * PT-BR: Somente Xbox One/Series recebe LB e RB redesenhados.
+     */
+    constexpr bool UsesModernShoulderButtons(Style style) noexcept
+    {
+        return style == Style::XboxSeries;
     }
 }
