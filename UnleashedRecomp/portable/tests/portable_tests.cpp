@@ -107,8 +107,11 @@ int main() {
         hid::EInputDevice::Xbox) == Profile::PlayStationClassic,
         "DS4 model is preferred over stale fallback family");
     Check(AutomaticProfile(hid::EInputDeviceExplicit::Xbox360,
-        hid::EInputDevice::PlayStation) == Profile::PlayStationClassic,
-        "Xbox 360 fallback family follows existing icon selection policy");
+        hid::EInputDevice::PlayStation) == Profile::XboxClassic,
+        "Xbox 360 explicit model wins over stale PlayStation family");
+    Check(AutomaticProfile(hid::EInputDeviceExplicit::SwitchPro,
+        hid::EInputDevice::PlayStation) == Profile::XboxClassic,
+        "Switch Pro uses Xbox scene fallback independent of prior Sony device");
     Check(AutomaticProfile(hid::EInputDeviceExplicit::Unknown,
         hid::EInputDevice::PlayStation) == Profile::PlayStationClassic,
         "unknown model retains PlayStation family fallback");

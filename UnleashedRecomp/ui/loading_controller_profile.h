@@ -23,17 +23,29 @@ namespace ui::loading_controller
     constexpr Profile AutomaticProfile(
         hid::EInputDeviceExplicit model, hid::EInputDevice family) noexcept
     {
-        switch (ui::controller_icons::AutomaticStyle(model))
+        // EN: Known SDL/libnx controller models win over the fallback
+        //     family, even if the user unplugged a different device before.
+        // PT-BR: Modelos conhecidos prevalecem sobre a familia anterior,
+        //     inclusive apos desconectar um controle diferente.
+        switch (model)
         {
-        case ui::controller_icons::Style::DualSense:
+        case hid::EInputDeviceExplicit::DualSense:
             return Profile::DualSense;
-        case ui::controller_icons::Style::XboxSeries:
-            return Profile::XboxOneSeries;
-        case ui::controller_icons::Style::PlayStationClassic:
+        case hid::EInputDeviceExplicit::DualShock3:
+        case hid::EInputDeviceExplicit::DualShock4:
             return Profile::PlayStationClassic;
+        case hid::EInputDeviceExplicit::XboxOne:
+            return Profile::XboxOneSeries;
+        case hid::EInputDeviceExplicit::Xbox360:
+        case hid::EInputDeviceExplicit::SwitchPro:
+        case hid::EInputDeviceExplicit::SwitchJCLeft:
+        case hid::EInputDeviceExplicit::SwitchJCRight:
+        case hid::EInputDeviceExplicit::SwitchJCPair:
+        case hid::EInputDeviceExplicit::SwitchHandheld:
+            return Profile::XboxClassic;
         default:
-            // EN: Unknown HID/SDL models use the last known input family.
-            // PT-BR: Modelo desconhecido usa a familia do ultimo controle.
+            // EN: Unidentified SDL devices preserve the last known family.
+            // PT-BR: Dispositivos nao identificados usam a ultima familia.
             return family == hid::EInputDevice::PlayStation
                 ? Profile::PlayStationClassic : Profile::XboxClassic;
         }
