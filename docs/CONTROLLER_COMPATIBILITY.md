@@ -161,3 +161,50 @@ selecione manualmente PlayStation ou Xbox nas opções.
 **EN:** Test USB and Bluetooth separately. Confirm hotplug, prompts and
 styling on the installer/options screens. Full-game binary compilation
 is not performed by the asset-free CI workflow.
+
+
+## Desenhos completos de controle no loading / Full controller art on loading screens
+
+**PT-BR:** As seis cenas originais de controle (Sonic diurno, Werehog,
+Super Sonic etc.) utilizam os identificadores \`360_sonic1\`,
+\`360_evil\` e outros equivalentes \`ps3_*\`. O hook existente
+\`LoadingScreenControllerMidAsmHook\` substitui somente os três
+primeiros caracteres, preservando o restante do identificador.
+
+O novo perfil \`ui/loading_controller_profile.h\` distingue
+**DualSense**, **Xbox One/Series**, **PlayStation clássico** e
+**Xbox clássico**. A seleção Automático escolhe \`ps3_*\` para DualSense
+e \`360_*\` para Xbox One/Series. Escolhas manuais Xbox/PlayStation
+continuam funcionando. O log informa a família escolhida.
+
+**IMPORTANTE:** Isso **não** desenha um controle moderno por si só.
+O jogo original **não contém** cenas \`ps5_*\` nem \`xbs_*\`.
+Tentar usá-las diretamente pode quebrar o carregamento. Para ver
+o desenho físico moderno, instale um **mod de recursos de loading**
+que substitua o slot \`ps3_*\` por DualSense e o slot \`360_*\`
+por Xbox One/Series no mesmo conjunto de recursos.
+
+- [Unleashed PS And Xbox Buttons](https://gamebanana.com/mods/580124)
+  oferece estilos PS5 e Xbox e recursos de loading. Configure as
+  variantes PS5/Xbox separadamente, caso essa opção esteja disponível.
+- [Emmy's Xbox Series X Buttons](https://gamebanana.com/mods/582273)
+  traz modelos de controle Xbox Series nas telas de loading.
+
+Não faça upload, cópia ou incorporação dessas artes ao repositório:
+respeite as licenças, opções e ordem de carregamento dos mods.
+No Linux, a instalação do gerenciador e a escolha dos perfis do
+mod podem exigir configuração manual. **Não misture dois mods que
+substituem o mesmo \`ui_loading.yncp\` sem antes verificar compatibilidade.**
+
+**EN:** The original loading screen contains exactly two scene families.
+Modern hardware profiles select the corresponding existing \`ps3\` or
+\`360\` slot; user-installed art mods supply different controller artwork.
+This avoids invalid guest scene names and changes no game binaries,
+textures, archives or third-party artwork. CI covers model-to-slot
+selection, not user mods or actual loading-screen rendering.
+
+Use \`bash tools/validate-linux-runtime.sh --game\` and inspect logs:
+\`Loading screen controller: DualSense (ps3 scene slot)\` or
+\`Loading screen controller: Xbox One/Series (360 scene slot)\`.
+If the artwork remains PS3/Xbox 360, the loading asset mod is missing,
+disabled or not set to the desired controller variant.

@@ -1,5 +1,6 @@
 #include <api/SWA.h>
 #include <hid/hid.h>
+#include <ui/loading_controller_profile.h>
 #include <os/logger.h>
 #include <user/achievement_manager.h>
 #include <user/persistent_storage_manager.h>
@@ -162,13 +163,31 @@ void LoadingScreenControllerMidAsmHook()
         0x820301E8  // 360_super
     };
 
-    auto isPlayStation = Config::ControllerIcons == EControllerIcons::PlayStation;
+    // EN: Detect the actual SDL/libnx controller model for the automatic
+    //     profile, but preserve manual controller-icon overrides.
+    //     Xbox One/Series and DualSense need user-provided modified
+    //     loading-art assets: the original engine only has 360/ps3 slots.
+    // PT-BR: Usa o modelo real para escolha automatica, respeitando
+    //     o modo manual. Artes modernas dependem de mod de recursos;
+    //     o jogo original possui somente cenas 360 e ps3.
+    const auto detected = ui::loading_controller::AutomaticProfile(
+        hid::g_inputDeviceExplicit, hid::g_inputDeviceController);
 
-    if (Config::ControllerIcons == EControllerIcons::Auto)
-        isPlayStation = hid::g_inputDeviceController == hid::EInputDevice::PlayStation;
+    const char* prefix = "360";
+    if (Config::ControllerIcons == EControllerIcons::PlayStation)
+        prefix = "ps3";
+    else if (Config::ControllerIcons == EControllerIcons::Auto)
+        prefix = ui::loading_controller::ScenePrefix(detected);
 
-    const char* prefix = isPlayStation ? "ps3" : "360";
-
+    // EN: The original scene names always have a three-character
+    //     prefix. Never generate a nonexistent scene name or alter
+    //     the suffix for Sonic/Werehog/robot/super loading art.
+    // PT-BR: Mantem o prefixo de tres caracteres e os seis sufixos,
+    //     sem criar nomes de cenas inexistentes no jogo.
     for (auto address : STR_ADDRESSES)
         memcpy(g_memory.Translate(address), prefix, 3);
+
+    LOGFN("Loading screen controller: {} (scene='{}', mode={}; modern art requires an installed mod)",
+        ui::loading_controller::Name(detected), prefix,
+        Config::ControllerIcons == EControllerIcons::Auto ? "auto" : "manual");
 }

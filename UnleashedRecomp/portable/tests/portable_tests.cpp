@@ -20,6 +20,7 @@
 #include "../../locale/locale.h"
 // EN/PT-BR: Pure controller-icon selection without image or GPU assets.
 #include "../../ui/controller_icon_style.h"
+#include "../../ui/loading_controller_profile.h"
 #include <system_error>
 
 static int failures = 0;
@@ -81,6 +82,40 @@ int main() {
         "Xbox 360 bumpers preserved");
     Check(!UsesModernShoulderButtons(Style::PlayStationClassic),
         "DualShock 4 shoulders preserved");
+
+    // EN: The guest owns exactly two scene families. Test mapping model
+    //     -> profile -> valid prefix without any copyrighted YNCP assets.
+    // PT-BR: As cenas do guest aceitam apenas 360/ps3; verifica o
+    //     mapeamento sem precisar dos arquivos licenciados do jogo.
+    using ui::loading_controller::Profile;
+    using ui::loading_controller::AutomaticProfile;
+    using ui::loading_controller::ScenePrefix;
+    using ui::loading_controller::UsesPlayStationScene;
+    const auto dualSenseLoading = AutomaticProfile(
+        hid::EInputDeviceExplicit::DualSense, hid::EInputDevice::PlayStation);
+    const auto seriesLoading = AutomaticProfile(
+        hid::EInputDeviceExplicit::XboxOne, hid::EInputDevice::Xbox);
+    Check(dualSenseLoading == Profile::DualSense, "DualSense loading model");
+    Check(seriesLoading == Profile::XboxOneSeries, "Xbox Series loading model");
+    Check(std::string_view(ScenePrefix(dualSenseLoading)) == "ps3",
+        "DualSense uses existing PS3 loading scene slot");
+    Check(std::string_view(ScenePrefix(seriesLoading)) == "360",
+        "Xbox One/Series uses existing 360 loading scene slot");
+    Check(UsesPlayStationScene(dualSenseLoading), "DualSense loading PlayStation branch");
+    Check(!UsesPlayStationScene(seriesLoading), "Xbox Series loading Xbox branch");
+    Check(AutomaticProfile(hid::EInputDeviceExplicit::DualShock4,
+        hid::EInputDevice::Xbox) == Profile::PlayStationClassic,
+        "DS4 model is preferred over stale fallback family");
+    Check(AutomaticProfile(hid::EInputDeviceExplicit::Xbox360,
+        hid::EInputDevice::PlayStation) == Profile::PlayStationClassic,
+        "Xbox 360 fallback family follows existing icon selection policy");
+    Check(AutomaticProfile(hid::EInputDeviceExplicit::Unknown,
+        hid::EInputDevice::PlayStation) == Profile::PlayStationClassic,
+        "unknown model retains PlayStation family fallback");
+    Check(AutomaticProfile(hid::EInputDeviceExplicit::Unknown,
+        hid::EInputDevice::Xbox) == Profile::XboxClassic,
+        "unknown model retains Xbox fallback");
+
 
 
     Check(portable::graphics::IsCompiled(portable::graphics::Backend::Vulkan), "Vulkan compiled");
