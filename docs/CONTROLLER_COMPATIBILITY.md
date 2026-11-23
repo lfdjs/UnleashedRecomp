@@ -208,3 +208,27 @@ Use \`bash tools/validate-linux-runtime.sh --game\` and inspect logs:
 \`Loading screen controller: Xbox One/Series (360 scene slot)\`.
 If the artwork remains PS3/Xbox 360, the loading asset mod is missing,
 disabled or not set to the desired controller variant.
+
+
+## Instalação opcional dos desenhos de loading / Optional loading artwork
+
+**PT-BR:** Os mods de arte do GameBanana não são repositórios Git e não
+devem ser copiados como submódulos sem autorização dos autores. A branch
+`portable` oferece um assistente de integração seguro (sem baixar artes)
+e orientação para o **Hedge Mod Manager** no Linux:
+
+~~~bash
+bash tools/controller-loading-mods.sh --status
+bash tools/controller-loading-mods.sh --install-manager
+bash tools/controller-loading-mods.sh --open-mod dualsense
+bash tools/controller-loading-mods.sh --open-mod xbox-series
+bash tools/controller-loading-mods.sh --launch-manager
+~~~
+
+**EN:** This helper only checks local setup, optionally installs/launches
+the official HMM Flatpak and opens the authors' download pages. Users
+install their chosen archives through HMM. No third-party assets are
+vendored, mirrored or added as Git submodules.
+
+Detalhes, permissões Flatpak e possíveis conflitos entre os slots
+`ps3_*`/`360_*`: [Guia de mods do loading](CONTROLLER_LOADING_MODS.md).

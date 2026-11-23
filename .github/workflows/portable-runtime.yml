@@ -21,6 +21,7 @@ on:
       - "UnleashedRecompLib/CMakeLists.txt"
       - "cmake/VerifyPregeneratedGuestSources.cmake"
       - "tools/build-linux-reuse-generated.sh"
+      - "tools/controller-loading-mods.sh"
       - "tools/tests/test-pregenerated-guest-sources.sh"
       - "UnleashedRecomp/locale/**"
       - "UnleashedRecomp/user/config.cpp"
@@ -34,6 +35,8 @@ on:
       - ".github/workflows/portable-runtime.yml"
   pull_request:
     paths:
+      - "tools/controller-loading-mods.sh"
+      - "tools/tests/test-controller-loading-mods.sh"
       - "UnleashedRecomp/ui/button_guide.cpp"
       - "UnleashedRecomp/ui/controller_icon_style.h"
       - "UnleashedRecomp/portable/**"
@@ -81,6 +84,10 @@ jobs:
           bash -n tools/build-linux-reuse-generated.sh
           bash -n tools/tests/test-pregenerated-guest-sources.sh
           bash tools/tests/test-pregenerated-guest-sources.sh
+          # EN/PT-BR: No mod assets or network access during helper tests.
+          bash -n tools/controller-loading-mods.sh
+          bash -n tools/tests/test-controller-loading-mods.sh
+          bash tools/tests/test-controller-loading-mods.sh
       - name: Check pt-BR translation coverage / Conferir traducao pt-BR
         if: runner.os == 'Linux'
         run: python3 tools/tests/check-pt-br-localization.py
